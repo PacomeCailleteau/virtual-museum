@@ -73,6 +73,8 @@ namespace CampusMuseum
             player = new GameObject("Commandes Virtual Museum").AddComponent<MuseumPlayer>();
             var originalFloor = GameObject.Find("Plane");
             if (originalFloor) originalFloor.SetActive(false);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(.48f,.51f,.56f);
             player.Initialize(view);
             player.CanMove = () => true;
             player.CanStand = CanStand;
@@ -236,7 +238,8 @@ namespace CampusMuseum
                 pick.Direct=true;
                 pick.Press = h => SelectRoom(room,h,root);
                 pick.Release = DropRoom;
-                Text(root,Wrap(room.name,19,1),new Vector3(0,.8f,-room.length/2+.02f),.37f,Color.white,TextAnchor.MiddleCenter);
+                Text(root,Wrap(room.name,19,1),new Vector3(0,room.height*.12f,-room.length/2-.065f),
+                    Mathf.Min(.37f,room.width/18f),Color.white,TextAnchor.MiddleCenter);
                 foreach (var art in data.artworks.Where(a => a.roomId == room.id))
                 {
                     var visual = Artwork(root,Api.Catalog,art);
@@ -250,7 +253,7 @@ namespace CampusMuseum
                     {
                         var steps=Enumerable.Range(0,tour.artworkIds.Count).Where(i=>tour.artworkIds[i]==art.id).Select(i=>(i+1).ToString()).ToArray();
                         if (steps.Length > 0)
-                            Text(root,string.Join(" / ",steps),art.localPosition+new Vector3(0,1.3f,-.32f),.52f,Navy,TextAnchor.MiddleCenter);
+                            Text(root,string.Join(" / ",steps),art.localPosition+new Vector3(0,1.45f,-.32f),.52f,Gold,TextAnchor.MiddleCenter);
                     }
                 }
             }

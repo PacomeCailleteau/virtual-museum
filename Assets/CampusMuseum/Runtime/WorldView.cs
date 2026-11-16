@@ -15,6 +15,7 @@ namespace CampusMuseum
         public static readonly Color Gold = new(.96f, .69f, .30f);
         public static readonly Color Red = new(.68f, .26f, .28f);
         static Font font;
+        static Material worldText;
         static Material lit;
         static Material unlit;
         static readonly Dictionary<(Color, bool), Material> materials = new();
@@ -56,8 +57,15 @@ namespace CampusMuseum
             var g = Root(parent, label, position);
             var mesh = g.gameObject.AddComponent<TextMesh>();
             if (!font) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (!worldText)
+            {
+                worldText = new Material(Resources.Load<Shader>("CampusMuseum/WorldText"));
+                worldText.mainTexture = font.material.mainTexture;
+                Font.textureRebuilt -= UpdateFontTexture;
+                Font.textureRebuilt += UpdateFontTexture;
+            }
             mesh.font = font;
-            g.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            g.GetComponent<MeshRenderer>().sharedMaterial = worldText;
             mesh.text = label;
             mesh.anchor = anchor;
             mesh.alignment = anchor == TextAnchor.MiddleCenter ? TextAlignment.Center : TextAlignment.Left;
@@ -65,6 +73,11 @@ namespace CampusMuseum
             mesh.characterSize = height * .148f;
             mesh.color = color;
             return mesh;
+        }
+
+        static void UpdateFontTexture(Font changed)
+        {
+            if (changed == font && worldText) worldText.mainTexture = font.material.mainTexture;
         }
 
         public static WorldAction Action(GameObject box, Action<MuseumPlayer.Hand> press, Action<MuseumPlayer.Hand> release = null)

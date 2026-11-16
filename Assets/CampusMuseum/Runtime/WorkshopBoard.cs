@@ -24,7 +24,7 @@ namespace CampusMuseum
 
         void DrawBoard()
         {
-            var board = Panel(stage,"Tableau de l’atelier",new Vector3(-.85f,1.65f,1.77f),4.3f,1.9f);
+            var board = Panel(stage,"Tableau de l’atelier",new Vector3(-.85f,2.03f,1.77f),4.3f,1.9f);
             Text(board,"ATELIER   /   PARCOURS ET ŒUVRES",new Vector3(-2.03f,.83f,-.08f),.105f,Cream);
             Text(board,Wrap(status,69,2),new Vector3(-2.03f,.65f,-.08f),.061f,Teal);
             if(activeField != TextField.None) { DrawKeyboard(board); return; }

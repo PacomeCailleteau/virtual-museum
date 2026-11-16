@@ -85,15 +85,18 @@ namespace CampusMuseum
                 bool inTour=tour?.artworkIds.Contains(art.id) ?? false;
                 var exhibit=Artwork(root,Api.Catalog,art);
                 Action(exhibit,_=>{ visitorArt=art.id; Tell(art.title); }).Direct=true;
-                var pad=Box(root,"Socle de présentation",new Vector3(art.localPosition.x,.14f,art.localPosition.z),
-                    new Vector3(.86f,.28f,.86f),target?Teal:Cream);
+                var bottom=exhibit.GetComponentsInChildren<Renderer>()
+                    .Select(renderer=>renderer.bounds.min.y-root.position.y).DefaultIfEmpty(.28f).Min();
+                var height=Mathf.Clamp(bottom,.05f,room.height-.10f);
+                var pad=Box(root,"Socle de présentation",new Vector3(art.localPosition.x,height/2,art.localPosition.z),
+                    new Vector3(.86f,height,.86f),target?Teal:Cream);
                 Action(pad,_=>{visitorArt=art.id;Tell(art.title);});
                 var label=Short(art.title,20)+(inTour?"  •":"");
-                var pos=new Vector3(art.localPosition.x,.42f,art.localPosition.z-.46f);
+                var pos=new Vector3(art.localPosition.x,Mathf.Max(height*.75f,.22f),art.localPosition.z-.46f);
                 Text(root,label,pos,.057f,Cream,TextAnchor.MiddleCenter);
                 if(target && visitorArt==art.id)
                 {
-                    var plaque=Panel(root,"Cartel de l’œuvre",pos-Vector3.up*.33f,.83f,.15f);
+                    var plaque=Panel(root,"Cartel de l’œuvre",pos-Vector3.up*.145f,.83f,.15f);
                     Key(plaque,"Valider l’étape",0,0,.75f,.112f,()=>ValidateStep(art),Teal);
                 }
                 if(target) guidePoint=new Vector3(art.localPosition.x,0,art.localPosition.z-.65f);
