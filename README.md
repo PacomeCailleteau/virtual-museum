@@ -1,38 +1,40 @@
 # Virtual Museum
 
-Projet RX de l’IMT Atlantique. Dans l’atelier, on aménage un musée miniature sur une table. La porte donne accès au même musée à taille humaine. Les commandes sont intégrées au décor, sur le tableau de l’atelier, les tables, les tiroirs et les panneaux des galeries.
+Nous avons réalisé Virtual Museum dans le cadre du cours RX à l’IMT Atlantique. Dans l’atelier, nous avons posé les salles miniatures sur une table pour pouvoir les prendre et les déplacer. Une porte donne accès au même musée à taille humaine.
+
+Nous avons placé les commandes dans le décor. Le tableau sert à préparer les parcours et à renseigner les fiches des œuvres. Les tiroirs servent à choisir les œuvres à exposer. Les panneaux des galeries donnent les informations utiles pendant la visite.
 
 ## Ouvrir le projet
 
-1. Cloner ce dépôt et télécharger le ZIP de la branche `main` du [socle Unity sur GitLab IMT](https://gitlab.imt-atlantique.fr/e20peill/projet-rx). L’accès au ZIP demande un compte IMT autorisé.
-2. Depuis la racine du dépôt, lancer la commande suivante avec Python 3. Renommer le ZIP si nécessaire pour utiliser le même nom que dans la commande.
+1. Cloner ce dépôt et télécharger le ZIP de la branche `main` du socle Unity avec un compte IMT autorisé. [Socle Unity sur GitLab IMT](https://gitlab.imt-atlantique.fr/e20peill/projet-rx)
+2. Placer le ZIP à la racine du dépôt sous le nom `projet-rx-main.zip`, puis lancer cette commande avec Python 3.
 
    ```powershell
    python scripts/install.py projet-rx-main.zip
    ```
 
-3. Ajouter le dossier `Unity` dans Unity Hub. Le socle cible Unity `6000.3.26f1`, XR Interaction Toolkit `3.5.1` et OpenXR `1.17.1`.
-4. Ouvrir `Assets/Scenes/VirtualMuseum.unity`, puis passer en mode Play. Pour un Quest, ajouter le module Android Build Support dans Unity Hub et utiliser le profil Android avec cette scène et OpenXR activé.
+3. Ajouter le dossier `Unity` dans Unity Hub. Le socle cible Unity `6000.3.26f1`, XR Interaction Toolkit `3.5.1` et OpenXR `1.17.1`. La version de Unity utilisée pour vérifier le projet est `6000.3.27f1`.
+4. Ouvrir `Assets/Scenes/VirtualMuseum.unity` et cliquer sur Play. Pour compiler sur Quest, installer le module Android Build Support dans Unity Hub, choisir Android comme plateforme et vérifier que la scène est incluse et qu’OpenXR est activé.
 
-Pour modifier le projet, éditer les fichiers suivis dans `Assets/CampusMuseum` et relancer le script avec Unity fermé. Si le registre Unity pose un problème de téléchargement, `--package-archives chemin` permet d’installer localement les versions `.tgz` indiquées dans le verrou du socle.
+Nous gardons les fichiers du groupe dans `Assets/CampusMuseum`. Après les avoir modifiés, fermer Unity et relancer le script pour les recopier dans le projet. Si le registre Unity bloque un téléchargement, l’option `--package-archives chemin` permet d’utiliser les archives `.tgz` correspondant aux versions du fichier `Packages/packages-lock.json` du socle.
 
 ## Commandes
 
 | Action | Casque | Éditeur sans casque |
 | --- | --- | --- |
-| Pointer, prendre et poser | Viser et tenir la gâchette d’index. Relâcher pour poser | Viser à la souris, tenir puis relâcher clic gauche |
-| Regarder et tourner | Casque et joystick droit | Maintenir clic droit et bouger la souris |
+| Pointer, prendre et poser | Viser et maintenir la gâchette d’index, puis la relâcher pour poser | Viser à la souris et maintenir le clic gauche, puis le relâcher |
+| Regarder et tourner | Tourner la tête ou utiliser le joystick droit | Maintenir le clic droit et bouger la souris |
 | Se déplacer | Joystick gauche | ZQSD ou WASD |
 | Basculer vers la téléportation | X à gauche, viser le sol puis presser la gâchette | T, puis clic gauche au sol |
 | Tourner une œuvre | Orienter le rayon pendant la prise, ou utiliser le bouton Tourner | R pendant la prise, ou utiliser le bouton Tourner |
 
 ## Essayer les deux modes
 
-1. Sélectionner une salle sur la maquette. Les commandes du plateau permettent de l’orienter, de la relier à une autre et de changer largeur, longueur et hauteur. Pour créer une salle, presser « Tracer une salle » puis pointer deux coins libres sur la table.
-2. Prendre une salle et la déposer sur la table d’édition. Elle s’agrandit à cet endroit. Ouvrir un tiroir du catalogue et déposer un exemplaire dans la salle. Le tableau sert à modifier le titre ou la description d’une œuvre sélectionnée. Actionner le levier de validation, puis reprendre la salle réduite et la déposer sur le repère turquoise.
-3. Créer un parcours sur le tableau. Choisir une œuvre placée, l’ajouter au parcours et régler l’ordre des étapes. Le tracé correspondant apparaît sur la maquette. Sauver permet de retrouver le musée et la session en cours sur le même appareil.
-4. Prendre la porte « Visiter le musée ». Le panneau de la galerie permet de démarrer un parcours, de reprendre une visite ou d’explorer librement. Les repères au sol et les portes indiquent le chemin. Désigner l’œuvre attendue et valider l’étape à proximité.
+1. Sélectionner une salle sur la maquette. Les commandes de la table permettent de la tourner, de la relier à une autre et de régler sa largeur, sa longueur et sa hauteur. Pour en créer une, appuyer sur « Tracer une salle » puis pointer deux coins libres sur la table.
+2. Déposer une salle sur la table d’édition pour l’agrandir. Ouvrir un tiroir et placer une œuvre dans la salle. Pour modifier son titre ou sa description, pointer l’œuvre puis utiliser le tableau. Actionner le levier pour valider. Reprendre ensuite la salle à la taille de la maquette et la déposer sur le repère turquoise.
+3. Créer un parcours sur le tableau. Sélectionner les œuvres à visiter, puis ordonner les étapes. Le tracé apparaît sur la maquette. Le bouton « Sauver » enregistre la configuration du musée et la progression de la visite sur l’appareil.
+4. Passer par la porte « Visiter le musée ». Le panneau de la galerie permet de choisir une visite libre, de démarrer un parcours ou de le reprendre. Suivre les repères au sol et les portes jusqu’à l’œuvre attendue, puis valider l’étape à proximité.
 
 ## Organisation du code
 
-Le dossier `Assets/CampusMuseum/Runtime` contient la mise en scène, les interactions et l’édition. Les deux modes partagent le `MuseumApi` et les œuvres fournis par le socle. Le projet Unity assemblé est dans `Unity`, avec les dépendances et les contenus accessibles via GitLab IMT.
+Nous utilisons le même `MuseumApi` dans l’atelier et dans la visite. Quand nous déplaçons une œuvre dans l’atelier, c’est donc la même instance qui change de place dans la galerie. Le dossier `Assets/CampusMuseum/Runtime` contient la mise en scène, les interactions et l’édition. Le script assemble le projet dans `Unity` avec le socle et les œuvres mis à disposition sur GitLab IMT.
