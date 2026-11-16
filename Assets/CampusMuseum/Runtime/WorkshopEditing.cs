@@ -14,10 +14,12 @@ namespace CampusMuseum
         void DrawEditor()
         {
             var room = draft?.Api.GetRoom(draft.RoomId) ?? Api.GetRoom(returningRoom);
-            var rail = Panel(stage, "Commandes de la table d’édition", new Vector3(3.15f,.71f,-.95f),2.37f,.49f);
+            var front = EditCenter + new Vector3(0,-.31f,-1.08f);
+            var rail = Panel(stage, "Commandes de la table d’édition", front,2.37f,.59f);
             rail.localRotation = Quaternion.Euler(38,0,0);
+            LabelPlate(rail,"TABLE D’ÉDITION",new Vector3(0,.208f,-.067f),1.48f,.14f,.10f);
             var label = room == null ? "Dépose une salle sur ce plateau." : Short(room.name,22);
-            Text(rail,label,new Vector3(-1.11f,.17f,-.08f),.065f,Cream);
+            Text(rail,label,new Vector3(-1.11f,.103f,-.08f),.065f,Cream);
             if(room == null) return;
 
             if(draft == null)

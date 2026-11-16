@@ -176,7 +176,6 @@ namespace CampusMuseum
             Box(stage,"Surface d’édition",EditCenter - Vector3.up*.034f,new Vector3(2.45f,.06f,1.9f),new Color(.31f,.44f,.45f));
             var plaqueTilt = Quaternion.Euler(35,0,0);
             LabelPlate(stage,"MAQUETTE",new Vector3(-.85f,1.015f,-1.16f),1.05f,.17f,.11f).localRotation = plaqueTilt;
-            LabelPlate(stage,"TABLE D’ÉDITION",new Vector3(3.15f,1.015f,-.59f),1.48f,.17f,.11f).localRotation = plaqueTilt;
             DrawMap();
             DrawEditor();
             DrawBoard();
