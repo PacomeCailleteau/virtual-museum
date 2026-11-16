@@ -1,0 +1,5 @@
+{
+  "name": "CampusMuseum",
+  "rootNamespace": "CampusMuseum",
+  "references": ["VirtualMuseum", "Unity.InputSystem", "Unity.XR.CoreUtils"]
+}
