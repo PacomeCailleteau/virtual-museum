@@ -91,12 +91,21 @@ namespace CampusMuseum
                 var pad=Box(root,"Socle de présentation",new Vector3(art.localPosition.x,height/2,art.localPosition.z),
                     new Vector3(.86f,height,.86f),target?Teal:Cream);
                 Action(pad,_=>{visitorArt=art.id;Tell(art.title);});
-                var label=Short(art.title,20)+(inTour?"  •":"");
-                var pos=new Vector3(art.localPosition.x,Mathf.Max(height*.75f,.22f),art.localPosition.z-.46f);
-                Text(root,label,pos,.057f,Cream,TextAnchor.MiddleCenter);
+                var label=Wrap(art.title+(inTour?"  •":""),22,2);
+                var lineLength=label.Split('\n').Max(line=>line.Length);
+                var labelWidth=Mathf.Clamp(lineLength*.077f+.22f,1.05f,Mathf.Min(1.95f,room.width-.18f));
+                var labelHeight=label.Contains('\n') ? .36f : .24f;
+                var labelX=Mathf.Clamp(art.localPosition.x,-room.width/2+labelWidth/2+.08f,room.width/2-labelWidth/2-.08f);
+                var labelZ=Mathf.Max(art.localPosition.z-.62f,-room.length/2+.12f);
+                var pos=new Vector3(labelX,Mathf.Clamp(height+.25f,.80f,room.height-.26f),labelZ);
+                var size=Mathf.Min(.125f,(labelWidth-.16f)/Mathf.Max(1,lineLength)*1.35f);
+                LabelPlate(root,label,pos,labelWidth,labelHeight,size);
+                var standHeight = pos.y - labelHeight/2;
+                Box(root,"Support du cartel",new Vector3(pos.x,standHeight/2,pos.z+.025f),
+                    new Vector3(.035f,standHeight,.045f),Navy,false);
                 if(target && visitorArt==art.id)
                 {
-                    var plaque=Panel(root,"Cartel de l’œuvre",pos-Vector3.up*.145f,.83f,.15f);
+                    var plaque=Panel(root,"Cartel de l’œuvre",pos-Vector3.up*(labelHeight/2+.09f),.90f,.15f);
                     Key(plaque,"Valider l’étape",0,0,.75f,.112f,()=>ValidateStep(art),Teal);
                 }
                 if(target) guidePoint=new Vector3(art.localPosition.x,0,art.localPosition.z-.65f);

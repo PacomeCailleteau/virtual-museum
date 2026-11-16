@@ -80,6 +80,16 @@ namespace CampusMuseum
             if (changed == font && worldText) worldText.mainTexture = font.material.mainTexture;
         }
 
+        public static Transform LabelPlate(Transform parent, string title, Vector3 position,
+            float width, float height, float textHeight)
+        {
+            var plate = Root(parent, "Signalétique", position);
+            var backing = Box(plate, "Fond du cartel", Vector3.zero, new Vector3(width,height,.028f), Navy, false);
+            backing.GetComponent<Renderer>().sharedMaterial = MakeMaterial(Navy, true);
+            Text(plate,title,new Vector3(0,0,-.02f),textHeight,Color.white,TextAnchor.MiddleCenter);
+            return plate;
+        }
+
         public static WorldAction Action(GameObject box, Action<MuseumPlayer.Hand> press, Action<MuseumPlayer.Hand> release = null)
         {
             var action = box.AddComponent<WorldAction>();

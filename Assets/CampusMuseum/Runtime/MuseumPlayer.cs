@@ -36,6 +36,8 @@ namespace CampusMuseum
         {
             public Ray Ray;
             public WorldAction Held;
+            internal bool NearSelection;
+            internal bool ReleaseCancelled;
             internal WorldAction Hovered;
             internal bool pressed;
             internal LineRenderer line;
@@ -113,6 +115,11 @@ namespace CampusMuseum
             var rightDevice = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
             bool wasXr = xr;
             xr = hmd.isValid && hmd.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var tracked) && tracked;
+            if (wasXr && !xr)
+            {
+                SetPointer(Left, false, false);
+                SetPointer(Right, false, false);
+            }
             var keyboard = Keyboard.current;
             var mouse = Mouse.current;
             Vector2 move = Vector2.zero;
@@ -196,6 +203,7 @@ namespace CampusMuseum
             hand.controller.gameObject.SetActive(valid && xr);
             hand.line.enabled = valid && (xr || hand.Held != null);
             WorldAction action = null;
+            bool near = false;
             var end = hand.Ray.GetPoint(10);
             if (valid && Physics.Raycast(hand.Ray, out var hit, 12, ~0, QueryTriggerInteraction.Ignore))
             {
@@ -214,6 +222,7 @@ namespace CampusMuseum
                     if (contactDistance>closest) continue;
                     closest=contactDistance;
                     action=candidate;
+                    near=true;
                     end=point;
                 }
             }
@@ -239,6 +248,8 @@ namespace CampusMuseum
                 if (action)
                 {
                     hand.Held = action;
+                    hand.NearSelection = near;
+                    hand.ReleaseCancelled = false;
                     action.Press?.Invoke(hand);
                 }
                 else if (teleport && CanMove())
@@ -250,6 +261,7 @@ namespace CampusMuseum
             {
                 var held = hand.Held;
                 hand.Held = null;
+                hand.ReleaseCancelled = !valid;
                 if (held) held.Release?.Invoke(hand);
             }
             hand.pressed = valid && trigger;

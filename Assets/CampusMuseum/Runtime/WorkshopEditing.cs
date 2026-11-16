@@ -8,6 +8,8 @@ namespace CampusMuseum
     public sealed partial class MuseumApp
     {
         int openDrawer = -1;
+        Vector3 artworkDropPosition;
+        bool artworkCanDrop;
 
         void DrawEditor()
         {
@@ -27,10 +29,7 @@ namespace CampusMuseum
                 grab.Press=h=>
                 {
                     if(carriedView) return;
-                    carriedRoom=room;
-                    carrier=h;
-                    carriedView=small;
-                    foreach(var collider in small.GetComponentsInChildren<Collider>()) collider.enabled=false;
+                    BeginRoomDrag(room,h,small);
                 };
                 grab.Release=DropRoom;
                 Key(rail,"Rapporte la salle sur le repère turquoise",0,-.066f,2.14f,.136f,()=>Tell("Prends la salle miniature et rapporte-la sur la maquette."));
@@ -106,27 +105,53 @@ namespace CampusMuseum
             draggingDefinition=definitionId;
             heldArtwork=visual;
             artHand=hand;
-            draggingPosition=local;
             draggingDirection=Vector3.ProjectOnPlane(hand.Ray.direction,Vector3.up);
             draggingOrientation=visual.transform.localRotation;
             draggingTurn=0f;
-            visual.transform.localPosition=local + Vector3.up*.1f;
             foreach(var c in visual.GetComponentsInChildren<Collider>()) c.enabled=false;
+            placement.Begin(hand.Ray, artEditor.TransformPoint(local), instanceId != null,
+                instanceId != null && hand.NearSelection);
+            placementMarker = Box(stage, "Repère de dépôt", placement.Position,
+                new Vector3(.13f,.008f,.13f), Teal, false).GetComponent<Renderer>();
+            UpdateArtworkDrag(0);
+        }
+
+        void UpdateArtworkDrag(float deltaTime)
+        {
+            placement.Update(artHand.Ray, deltaTime);
+            var room = draft.Api.GetRoom(draft.RoomId);
+            var rawPosition = artEditor.InverseTransformPoint(placement.Position);
+            var inside = MuseumLayout.ClampInside(room, rawPosition);
+            artworkCanDrop = placement.CanPlace && (inside - rawPosition).sqrMagnitude * editScale * editScale <= .035f * .035f;
+            artworkDropPosition = inside;
+            heldArtwork.transform.localPosition = inside + Vector3.up * Mathf.Min(.12f, room.height - inside.y);
+
+            if (UnityEngine.InputSystem.Keyboard.current?.rKey.wasPressedThisFrame == true)
+                draggingTurn += 15f;
+            var direction = Vector3.ProjectOnPlane(artHand.Ray.direction, Vector3.up);
+            var yaw = direction.sqrMagnitude > .005f && draggingDirection.sqrMagnitude > .005f
+                ? Vector3.SignedAngle(draggingDirection, direction, Vector3.up) : 0;
+            var intentionalYaw = Mathf.Sign(yaw) * Mathf.Max(0, Mathf.Abs(yaw) - 12f) * .6f;
+            var rotation = Quaternion.AngleAxis(intentionalYaw + draggingTurn, Vector3.up) * draggingOrientation;
+            heldArtwork.transform.localRotation = Quaternion.Slerp(heldArtwork.transform.localRotation, rotation,
+                1f - Mathf.Exp(-deltaTime / .10f));
+
+            placementMarker.transform.position = artEditor.TransformPoint(new Vector3(inside.x,.045f,inside.z));
+            placementMarker.sharedMaterial = MakeMaterial(artworkCanDrop ? Teal : Red, true);
         }
 
         void EndArtwork(MuseumPlayer.Hand hand)
         {
             if(artHand != hand || !heldArtwork || draft==null) return;
             var room=draft.Api.GetRoom(draft.RoomId);
-            var placed=HitPlane(hand.Ray,artEditor.position.y+draggingPosition.y*editScale,out var point) &&
-                MuseumLayout.Contains(room,artEditor.InverseTransformPoint(point));
+            var placed=artworkCanDrop && !hand.ReleaseCancelled;
             var rotation=heldArtwork.transform.localRotation;
-            var position=artEditor.InverseTransformPoint(point);
-            position.y=draggingPosition.y;
+            var position=artworkDropPosition;
             var id=draggingId;
             var definition=draggingDefinition;
             heldArtwork=null;
             artHand=null;
+            placementMarker.enabled = false;
             if(!placed)
             {
                 Tell("Dépose l’œuvre à l’intérieur de la salle agrandie.");
@@ -135,7 +160,8 @@ namespace CampusMuseum
             if(id!=null)
             {
                 var art=draft.Api.GetArtwork(id);
-                if((position-art.localPosition).sqrMagnitude > .01f || Quaternion.Angle(rotation,art.localRotation)>3)
+                if (Vector3.Distance(position,art.localPosition) * editScale > .009f ||
+                    Quaternion.Angle(rotation,art.localRotation) > 3f)
                     draft.Apply(api=>api.SetArtworkTransform(id,position,rotation,art.localScale));
             }
             else

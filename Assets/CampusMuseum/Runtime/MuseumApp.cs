@@ -25,8 +25,13 @@ namespace CampusMuseum
         Transform artEditor;
         MuseumEdit draft;
         Room carriedRoom;
+        Room roomCandidate;
         Transform carriedView;
         MuseumPlayer.Hand carrier;
+        enum RoomDrop { None, Map, Edit, Return, Occupied }
+        RoomDrop roomDrop;
+        readonly SurfaceDrag placement = new();
+        Renderer placementMarker;
         GameObject heldArtwork;
         MuseumPlayer.Hand artHand;
         float editScale;
@@ -103,36 +108,8 @@ namespace CampusMuseum
             if (!player) return;
             if (dirty && !carriedView && !heldArtwork) Draw();
             player.Tick();
-            if (carriedView && carrier != null)
-            {
-                var room = carriedRoom;
-                var target = carrier.Ray.GetPoint(.65f);
-                if (HitPlane(carrier.Ray, MapCenter.y, out var ground) && InsideBench(ground, MapCenter, MapWidth, MapLength))
-                    target = ground + Vector3.up * .07f;
-                if (HitPlane(carrier.Ray, EditCenter.y, out var edit) && InsideBench(edit,EditCenter, 2.45f, 1.9f))
-                    target = EditCenter + Vector3.up * .07f;
-                carriedView.SetPositionAndRotation(target, room.rotation);
-            }
-            if (heldArtwork && artHand != null && artEditor)
-            {
-                var localHeight = draggingPosition.y;
-                if (HitPlane(artHand.Ray, artEditor.position.y + localHeight * editScale, out var point))
-                {
-                    var room = draft.Api.GetRoom(draft.RoomId);
-                    var local=MuseumLayout.ClampInside(room,artEditor.InverseTransformPoint(point));
-                    local.y = Mathf.Min(draggingPosition.y+.11f,room.height-.1f);
-                    heldArtwork.transform.localPosition = local;
-                    var direction=Vector3.ProjectOnPlane(artHand.Ray.direction,Vector3.up);
-                    if (direction.sqrMagnitude>.005f && draggingDirection.sqrMagnitude>.005f)
-                    {
-                        var yaw=Vector3.SignedAngle(draggingDirection,direction,Vector3.up);
-                        heldArtwork.transform.localRotation=Quaternion.AngleAxis(yaw+draggingTurn,Vector3.up)*draggingOrientation;
-                    }
-                }
-                if (UnityEngine.InputSystem.Keyboard.current != null &&
-                    UnityEngine.InputSystem.Keyboard.current.rKey.wasPressedThisFrame)
-                    draggingTurn += 15f;
-            }
+            if (carriedView) UpdateRoomDrag(Time.unscaledDeltaTime);
+            if (heldArtwork) UpdateArtworkDrag(Time.unscaledDeltaTime);
             if (drawing && corner.HasValue && preview)
             {
                 var hand = player.Right;
@@ -197,8 +174,9 @@ namespace CampusMuseum
             Action(map,h => Plot(h.Ray));
             Bench(EditCenter, 2.45f, 1.9f);
             Box(stage,"Surface d’édition",EditCenter - Vector3.up*.034f,new Vector3(2.45f,.06f,1.9f),new Color(.31f,.44f,.45f));
-            Text(stage,"MAQUETTE",new Vector3(-2.9f,.96f,-1.48f),.10f,Navy);
-            Text(stage,"TABLE D’ÉDITION",new Vector3(2f,.96f,-.94f),.095f,Navy);
+            var plaqueTilt = Quaternion.Euler(35,0,0);
+            LabelPlate(stage,"MAQUETTE",new Vector3(-.85f,1.015f,-1.16f),1.05f,.17f,.11f).localRotation = plaqueTilt;
+            LabelPlate(stage,"TABLE D’ÉDITION",new Vector3(3.15f,1.015f,-.59f),1.48f,.17f,.11f).localRotation = plaqueTilt;
             DrawMap();
             DrawEditor();
             DrawBoard();
@@ -302,48 +280,81 @@ namespace CampusMuseum
             selectedArt=null;
             activeField=TextField.None;
             confirmDelete=false;
-            carriedRoom=room;
-            carrier=hand;
-            carriedView=visual;
+            BeginRoomDrag(room, hand, visual);
+        }
+
+        void BeginRoomDrag(Room room, MuseumPlayer.Hand hand, Transform visual)
+        {
+            carriedRoom = room;
+            roomCandidate = Api.GetRoom(room.id);
+            carrier = hand;
+            carriedView = visual;
             foreach (var collider in visual.GetComponentsInChildren<Collider>()) collider.enabled = false;
+            placement.Begin(hand.Ray, visual.position, true, hand.NearSelection);
+            placementMarker = Box(stage, "Repère de dépôt", visual.position,
+                new Vector3(room.width * Scale + .035f, .012f, room.length * Scale + .035f), Teal, false).GetComponent<Renderer>();
+            UpdateRoomDrag(0);
+        }
+
+        void UpdateRoomDrag(float deltaTime)
+        {
+            placement.Update(carrier.Ray, deltaTime);
+            var point = placement.Position;
+            carriedView.position = point + Vector3.up * .075f;
+            roomDrop = RoomDrop.None;
+            if (placement.CanPlace && InsideBench(point, MapCenter, MapWidth, MapLength))
+            {
+                if (returningRoom == carriedRoom.id)
+                {
+                    if ((point - OnMap(carriedRoom.position)).sqrMagnitude <= .22f * .22f)
+                        roomDrop = RoomDrop.Return;
+                }
+                else
+                {
+                    roomCandidate.position = InMuseum(point);
+                    roomDrop = FitsTable(roomCandidate) && !MuseumLayout.Overlaps(roomCandidate, data.rooms)
+                        ? RoomDrop.Map : RoomDrop.Occupied;
+                }
+            }
+            else if (placement.CanPlace && returningRoom == null && InsideBench(point, EditCenter, 2.45f, 1.9f))
+            {
+                roomDrop = RoomDrop.Edit;
+            }
+
+            var markerPoint = roomDrop == RoomDrop.Return ? OnMap(carriedRoom.position) : point;
+            placementMarker.transform.SetPositionAndRotation(markerPoint + Vector3.up * .012f, carriedRoom.rotation);
+            placementMarker.enabled = roomDrop != RoomDrop.None;
+            placementMarker.sharedMaterial = MakeMaterial(roomDrop == RoomDrop.Occupied ? Red : Teal, true);
         }
 
         void DropRoom(MuseumPlayer.Hand hand)
         {
             if (carrier != hand || !carriedView) return;
             var room = carriedRoom;
-            carriedRoom=null;
-            carriedView=null;
-            carrier=null;
-            if (HitPlane(hand.Ray,EditCenter.y,out var edit) && InsideBench(edit,EditCenter,2.45f,1.9f) && returningRoom == null)
+            var position = roomCandidate.position;
+            var target = hand.ReleaseCancelled ? RoomDrop.None : roomDrop;
+            carriedRoom = null;
+            roomCandidate = null;
+            carriedView = null;
+            carrier = null;
+            placementMarker.enabled = false;
+            if (target == RoomDrop.Edit)
             {
                 draft = new MuseumEdit(Api,room.id);
                 Tell("Salle agrandie. Place les œuvres puis actionne l’interrupteur.");
             }
-            else if (HitPlane(hand.Ray,MapCenter.y,out var ground) && InsideBench(ground,MapCenter,MapWidth,MapLength))
+            else if (target == RoomDrop.Return)
             {
-                if (returningRoom == room.id)
-                {
-                    if ((OnMap(room.position)-ground).sqrMagnitude <= .22f * .22f)
-                    {
-                        returningRoom=null;
-                        Tell("Salle remise sur la maquette.");
-                    }
-                    else Tell("Repose la salle sur le repère turquoise.");
-                    return;
-                }
-                var prior = room.position;
-                room.position=InMuseum(ground);
-                if (!FitsTable(room) || MuseumLayout.Overlaps(room,Api.Data.rooms))
-                    Tell("Emplacement occupé ou en dehors du plateau.");
-                else
-                {
-                    if ((room.position-prior).sqrMagnitude > .24f)
-                        Api.SetRoomTransform(room.id,room.position,room.rotation);
-                    Tell(room.name + " sélectionnée.");
-                }
+                returningRoom = null;
+                Tell("Salle remise sur la maquette.");
             }
-            else Tell(returningRoom != null ? "Reprends la salle et vise son repère sur la maquette." : room.name + " sélectionnée.");
+            else if (target == RoomDrop.Map && Vector3.Distance(position, room.position) * Scale > .012f)
+            {
+                Api.SetRoomTransform(room.id, position, room.rotation);
+                Tell(room.name + " déplacée.");
+            }
+            else if (target == RoomDrop.Occupied) Tell("Emplacement occupé ou en dehors du plateau.");
+            else Tell(returningRoom != null ? "Repose la salle sur le repère turquoise." : room.name + " sélectionnée.");
         }
 
         bool FitsTable(Room room)

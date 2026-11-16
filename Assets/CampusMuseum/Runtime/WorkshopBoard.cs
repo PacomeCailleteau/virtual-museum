@@ -14,7 +14,6 @@ namespace CampusMuseum
         int tourPage;
         int artPage;
         int stopPage;
-        Vector3 draggingPosition;
         Quaternion draggingOrientation;
         Vector3 draggingDirection;
         float draggingTurn;
