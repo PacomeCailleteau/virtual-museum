@@ -14,10 +14,7 @@ namespace CampusMuseum
         void DrawEditor()
         {
             var room = draft?.Api.GetRoom(draft.RoomId) ?? Api.GetRoom(returningRoom);
-            var front = EditCenter + new Vector3(0,-.31f,-1.08f);
-            var rail = Panel(stage, "Commandes de la table d’édition", front,2.37f,.59f);
-            rail.localRotation = Quaternion.Euler(38,0,0);
-            LabelPlate(rail,"TABLE D’ÉDITION",new Vector3(0,.208f,-.067f),1.48f,.14f,.10f);
+            var rail = WorkshopContent(workshop.editingControls);
             var label = room == null ? "Dépose une salle sur ce plateau." : Short(room.name,22);
             Text(rail,label,new Vector3(-1.11f,.103f,-.08f),.065f,Cream);
             if(room == null) return;
@@ -38,7 +35,7 @@ namespace CampusMuseum
                 return;
             }
 
-            editScale = Mathf.Min(1.82f/Mathf.Max(room.width,.1f),1.36f/Mathf.Max(room.length,.1f),.43f);
+            editScale = Mathf.Min(Mathf.Max(.1f,EditWidth-.63f)/room.width,Mathf.Max(.1f,EditLength-.54f)/room.length,.43f);
             artEditor=Shell(stage,room,EditCenter,Quaternion.identity,editScale,true,new Color(.69f,.78f,.72f));
             foreach(var art in draft.Api.GetArtworksInRoom(room.id))
             {
@@ -53,7 +50,7 @@ namespace CampusMuseum
             Key(rail,"Descendre l’œuvre",-.63f,-.15f,.90f,.115f,()=>LiftExhibit(-.15f));
             Key(rail,"Monter l’œuvre",.33f,-.15f,.90f,.115f,()=>LiftExhibit(.15f));
 
-            var lever=Root(stage,"Interrupteur de validation",new Vector3(4.24f,1.08f,-.59f));
+            var lever=Root(stage,"Interrupteur de validation",EditCenter + new Vector3(1.09f,.14f,-.69f));
             Box(lever,"Socle",Vector3.zero,new Vector3(.29f,.22f,.30f),Navy);
             var handle=Box(lever,"Levier",new Vector3(0,.18f,0),new Vector3(.08f,.32f,.08f),Teal);
             handle.transform.localRotation=Quaternion.Euler(32,0,0);
@@ -65,9 +62,7 @@ namespace CampusMuseum
 
         void DrawDrawers()
         {
-            var cabinet=Root(stage,"Catalogue à tiroirs",new Vector3(4.85f,1.12f,.65f));
-            Box(cabinet,"Meuble",new Vector3(0,-.18f,.18f),new Vector3(1.07f,1.62f,.57f),Sand);
-            Text(cabinet,"CATALOGUE",new Vector3(0,.68f,-.123f),.095f,Cream,TextAnchor.MiddleCenter);
+            var cabinet = WorkshopContent(workshop.catalogue);
             var definitions=Api.Catalog.Definitions;
             for(int i=0;i<definitions.Count;i++)
             {

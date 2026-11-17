@@ -11,12 +11,14 @@ namespace CampusMuseum
 {
     public sealed partial class MuseumApp : MonoBehaviour
     {
-        static readonly Vector3 MapCenter = new(-.85f,.94f,.05f);
-        static readonly Vector3 EditCenter = new(3.15f,.94f,.1f);
-        static readonly Vector3 Arrival = new(-.8f,0,-2.15f);
         const float Scale = .092f;
-        const float MapWidth = 4.3f;
-        const float MapLength = 2.8f;
+        WorkshopLayout workshop;
+        Vector3 MapCenter => workshop.mapOrigin.position;
+        Vector3 EditCenter => workshop.editingOrigin.position;
+        float MapWidth => workshop.mapSurface.bounds.size.x;
+        float MapLength => workshop.mapSurface.bounds.size.z;
+        float EditWidth => workshop.editingSurface.bounds.size.x;
+        float EditLength => workshop.editingSurface.bounds.size.z;
 
         MuseumBackend backend;
         MuseumApi Api => backend.Api;
@@ -67,6 +69,12 @@ namespace CampusMuseum
         void Start()
         {
             backend = GetComponent<MuseumBackend>();
+            workshop = FindFirstObjectByType<WorkshopLayout>();
+            if (!workshop)
+                workshop = Instantiate(Resources.Load<GameObject>("CampusMuseum/Workshop")).GetComponent<WorkshopLayout>();
+            foreach (var label in workshop.GetComponentsInChildren<TextMesh>()) UseWorldText(label);
+            Action(workshop.mapSurface.gameObject, hand => Plot(hand.Ray));
+            Action(workshop.exit, _ => EnterMuseum());
             view = Camera.main ? Camera.main : FindFirstObjectByType<Camera>();
             if (!view)
             {
@@ -83,7 +91,7 @@ namespace CampusMuseum
             player.Initialize(view);
             player.CanMove = () => true;
             player.CanStand = CanStand;
-            player.Place(Arrival, 0);
+            player.Place(workshop.arrival.position, workshop.arrival.eulerAngles.y);
             Api.Changed += OnModelChanged;
             Api.SessionChanged += QueueDraw;
             data = Api.Data;
@@ -134,6 +142,7 @@ namespace CampusMuseum
                 stage.gameObject.SetActive(false);
                 Destroy(stage.gameObject);
             }
+            workshop.gameObject.SetActive(!visiting);
             stage = Root(transform, visiting ? "Musée à taille humaine" : "Atelier", Vector3.zero);
             if (visiting)
             {
@@ -156,8 +165,8 @@ namespace CampusMuseum
         static bool InsideBench(Vector3 point, Vector3 center, float width, float length) =>
             Mathf.Abs(point.x-center.x) < width/2 && Mathf.Abs(point.z-center.z) < length/2;
 
-        static Vector3 OnMap(Vector3 point) => MapCenter + point * Scale;
-        static Vector3 InMuseum(Vector3 point)
+        Vector3 OnMap(Vector3 point) => MapCenter + point * Scale;
+        Vector3 InMuseum(Vector3 point)
         {
             var local = (point - MapCenter) / Scale;
             return new Vector3(local.x,0,local.z);
@@ -165,35 +174,23 @@ namespace CampusMuseum
 
         void DrawWorkshop()
         {
-            Box(stage,"Parquet",new Vector3(1,-.072f,0),new Vector3(11,.12f,9), new Color(.60f,.57f,.50f));
-            Box(stage,"Fond de l’atelier",new Vector3(1,1.8f,3.55f),new Vector3(11,3.6f,.15f),Navy,false);
-            Box(stage,"Mur latéral",new Vector3(-4.5f,1.5f,.3f),new Vector3(.14f,3.1f,6.5f),new Color(.20f,.31f,.38f),false);
-            Bench(MapCenter, MapWidth, MapLength);
-            var map = Box(stage,"Surface du musée", MapCenter - Vector3.up*.033f,
-                new Vector3(MapWidth,.06f,MapLength), new Color(.74f,.65f,.50f));
-            Action(map,h => Plot(h.Ray));
-            Bench(EditCenter, 2.45f, 1.9f);
-            Box(stage,"Surface d’édition",EditCenter - Vector3.up*.034f,new Vector3(2.45f,.06f,1.9f),new Color(.31f,.44f,.45f));
-            var plaqueTilt = Quaternion.Euler(35,0,0);
-            LabelPlate(stage,"MAQUETTE",new Vector3(-.85f,1.015f,-1.16f),1.05f,.17f,.11f).localRotation = plaqueTilt;
             DrawMap();
             DrawEditor();
             DrawBoard();
-            Door(stage,"Visiter le musée",new Vector3(4.63f,0,2.73f),EnterMuseum,false);
             if (drawing && corner.HasValue)
             {
                 preview = Box(stage,"Emprise de la salle",corner.Value + Vector3.up*.016f,new Vector3(.05f,.025f,.05f),Teal,false).transform;
-                previewDimensions = Text(stage,"",new Vector3(-.85f,1.1f,-1.37f),.09f,Navy,TextAnchor.MiddleCenter);
+                previewDimensions = Text(stage,"",MapCenter + new Vector3(0,.16f,-MapLength/2),.09f,Navy,TextAnchor.MiddleCenter);
             }
             Physics.SyncTransforms();
         }
 
-        void Bench(Vector3 center, float width,float length)
+        Transform WorkshopContent(Transform anchor)
         {
-            Box(stage,"Plateau",center-Vector3.up*.115f,new Vector3(width,.12f,length),Sand);
-            foreach (var x in new[] {-width/2+.12f,width/2-.12f})
-                foreach (var z in new[] {-length/2+.12f,length/2-.12f})
-                    Box(stage,"Pied",new Vector3(center.x+x,.40f,center.z+z),new Vector3(.095f,.80f,.095f),Navy);
+            var content = Root(stage, anchor.name, Vector3.zero);
+            content.SetPositionAndRotation(anchor.position, anchor.rotation);
+            content.localScale = anchor.lossyScale;
+            return content;
         }
 
         void DrawMap()
@@ -315,7 +312,7 @@ namespace CampusMuseum
                         ? RoomDrop.Map : RoomDrop.Occupied;
                 }
             }
-            else if (placement.CanPlace && returningRoom == null && InsideBench(point, EditCenter, 2.45f, 1.9f))
+            else if (placement.CanPlace && returningRoom == null && InsideBench(point, EditCenter, EditWidth, EditLength))
             {
                 roomDrop = RoomDrop.Edit;
             }

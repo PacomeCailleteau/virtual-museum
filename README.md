@@ -18,6 +18,12 @@ Nous avons placé les commandes dans le décor. Le tableau sert à préparer les
 
 Nous gardons les fichiers du groupe dans `Assets/CampusMuseum`. Après les avoir modifiés, fermer Unity et relancer le script pour les recopier dans le projet. Si le registre Unity bloque un téléchargement, l’option `--package-archives chemin` permet d’utiliser les archives `.tgz` correspondant aux versions du fichier `Packages/packages-lock.json` du socle.
 
+## Modifier l’atelier
+
+L’objet `Workshop` est visible dans la hiérarchie de `VirtualMuseum.unity` avant Play. Nous avons regroupé les tables, leurs enseignes, le tableau, le catalogue, la porte et le point d’arrivée dans le prefab `Workshop.prefab`. Les salles, les œuvres et le contenu des panneaux apparaissent au lancement avec les données du musée.
+
+Pour modifier le décor du groupe, ouvrir `Assets/CampusMuseum/Resources/CampusMuseum/Workshop.prefab` dans Unity. Déplacer une table par son objet parent déplace aussi ses commandes et sa zone de dépôt. Garder les tables alignées sur les axes de la scène et conserver les références du composant `WorkshopLayout`. Pour partager le changement, recopier le prefab ou les matériaux modifiés du dossier `Unity` vers les mêmes emplacements dans `Assets/CampusMuseum` à la racine du dépôt.
+
 ## Commandes
 
 | Action | Casque | Éditeur sans casque |

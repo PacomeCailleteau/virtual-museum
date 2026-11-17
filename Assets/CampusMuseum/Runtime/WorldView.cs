@@ -57,6 +57,21 @@ namespace CampusMuseum
             var g = Root(parent, label, position);
             var mesh = g.gameObject.AddComponent<TextMesh>();
             if (!font) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            mesh.font = font;
+            UseWorldText(mesh);
+            mesh.text = label;
+            mesh.anchor = anchor;
+            mesh.alignment = anchor == TextAnchor.MiddleCenter ? TextAlignment.Center : TextAlignment.Left;
+            mesh.fontSize = 70;
+            mesh.characterSize = height * .148f;
+            mesh.color = color;
+            return mesh;
+        }
+
+        public static void UseWorldText(TextMesh mesh)
+        {
+            if (!font) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (mesh.font && mesh.font != font) return;
             if (!worldText)
             {
                 worldText = new Material(Resources.Load<Shader>("CampusMuseum/WorldText"));
@@ -65,14 +80,7 @@ namespace CampusMuseum
                 Font.textureRebuilt += UpdateFontTexture;
             }
             mesh.font = font;
-            g.GetComponent<MeshRenderer>().sharedMaterial = worldText;
-            mesh.text = label;
-            mesh.anchor = anchor;
-            mesh.alignment = anchor == TextAnchor.MiddleCenter ? TextAlignment.Center : TextAlignment.Left;
-            mesh.fontSize = 70;
-            mesh.characterSize = height * .148f;
-            mesh.color = color;
-            return mesh;
+            mesh.GetComponent<MeshRenderer>().sharedMaterial = worldText;
         }
 
         static void UpdateFontTexture(Font changed)

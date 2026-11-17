@@ -23,8 +23,7 @@ namespace CampusMuseum
 
         void DrawBoard()
         {
-            var board = Panel(stage,"Tableau de l’atelier",new Vector3(-.85f,2.03f,1.77f),4.3f,1.9f);
-            Text(board,"ATELIER   /   PARCOURS ET ŒUVRES",new Vector3(-2.03f,.83f,-.08f),.105f,Cream);
+            var board = WorkshopContent(workshop.board);
             Text(board,Wrap(status,69,2),new Vector3(-2.03f,.65f,-.08f),.061f,Teal);
             if(activeField != TextField.None) { DrawKeyboard(board); return; }
 
@@ -109,8 +108,7 @@ namespace CampusMuseum
 
         void RoomControls()
         {
-            var controls=Panel(stage,"Commandes de la maquette",new Vector3(-.9f,.69f,-1.51f),4.02f,.62f);
-            controls.localRotation=Quaternion.Euler(38,0,0);
+            var controls = WorkshopContent(workshop.mapControls);
             var room=(draft?.Api ?? Api).GetRoom(draft?.RoomId ?? selectedRoom);
             Text(controls,room==null ? "SALLE" :
                 $"{Short(room.name,25)}    {room.width:0.#} × {room.length:0.#} × {room.height:0.#} m",

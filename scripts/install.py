@@ -1,6 +1,7 @@
 import argparse
 import json
 from pathlib import Path, PurePosixPath
+import re
 import shutil
 import tempfile
 import zipfile
@@ -9,6 +10,53 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 SCENE = Path("Assets/Scenes/VirtualMuseum.unity")
 MANIFEST = Path("Packages/manifest.json")
+WORKSHOP = Path("Assets/CampusMuseum/Resources/CampusMuseum/Workshop.prefab.meta")
+
+
+def add_workshop_to_scene(project):
+    scene_path = project / SCENE
+    scene = scene_path.read_bytes()
+    prefab_meta = (project / WORKSHOP).read_text(encoding="utf-8")
+    guid = re.search(r"^guid: ([a-f0-9]{32})$", prefab_meta, re.MULTILINE)
+    if not guid:
+        raise ValueError("Le prefab de l’atelier est introuvable.")
+    reference = f"  m_SourcePrefab: {{fileID: 100100000, guid: {guid[1]}, type: 3}}".encode()
+    if reference in scene:
+        return
+
+    roots = re.search(rb"^--- !u!1660057539 &\d+\r?\nSceneRoots:\r?\n", scene, re.MULTILINE)
+    if not roots or not re.fullmatch(rb"(?s)SceneRoots:\s+m_ObjectHideFlags: 0\s+m_Roots:\s*(?:- \{fileID: -?\d+\}\s*)+", scene[roots.start():].split(b"\n", 1)[1]):
+        raise ValueError("La liste des objets racine de VirtualMuseum.unity est introuvable.")
+    existing_ids = set(re.findall(rb"^--- !u!\d+ &(-?\d+)", scene, re.MULTILINE))
+    instance_id = 903610200000000001
+    while str(instance_id).encode() in existing_ids:
+        instance_id += 1
+    newline = b"\r\n" if b"\r\n" in scene else b"\n"
+    instance = [
+        f"--- !u!1001 &{instance_id}",
+        "PrefabInstance:",
+        "  m_ObjectHideFlags: 0",
+        "  serializedVersion: 2",
+        "  m_Modification:",
+        "    serializedVersion: 3",
+        "    m_TransformParent: {fileID: 0}",
+        "    m_Modifications: []",
+        "    m_RemovedComponents: []",
+        "    m_RemovedGameObjects: []",
+        "    m_AddedGameObjects: []",
+        "    m_AddedComponents: []",
+        reference.decode(),
+    ]
+    with tempfile.NamedTemporaryFile(dir=scene_path.parent, delete=False) as output:
+        output.write(scene[:roots.start()])
+        output.write(newline.join(line.encode() for line in instance) + newline)
+        output.write(scene[roots.start():].rstrip(b"\r\n") + newline)
+        output.write(f"  - {{fileID: {instance_id}}}".encode() + newline)
+    temporary = Path(output.name)
+    try:
+        temporary.replace(scene_path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def unpack_starter(archive, project):
@@ -71,6 +119,7 @@ def main():
         assets = project / "Assets"
         shutil.copytree(ROOT / "Assets/CampusMuseum", assets / "CampusMuseum", dirs_exist_ok=True)
         shutil.copy2(ROOT / "Assets/CampusMuseum.meta", assets)
+        add_workshop_to_scene(project)
         if args.package_archives:
             install_local_packages(project, args.package_archives.resolve())
     except (OSError, ValueError, zipfile.BadZipFile) as error:

@@ -25,7 +25,7 @@ namespace CampusMuseum
         {
             visiting=false;
             visitorArt=null;
-            player.Place(Arrival,0);
+            player.Place(workshop.arrival.position, workshop.arrival.eulerAngles.y);
             Tell("De retour à l’atelier.");
         }
 
@@ -45,8 +45,8 @@ namespace CampusMuseum
             {
                 bool inside = world.x>-4.3f && world.x<6.3f && world.z>-4.25f && world.z<3.15f;
                 return inside && !InsideBench(world,MapCenter,MapWidth+.22f,MapLength+.15f) &&
-                    !InsideBench(world,EditCenter,2.67f,2.08f) &&
-                    !InsideBench(world,new Vector3(4.85f,0,.84f),1.30f,.8f);
+                    !InsideBench(world,EditCenter,EditWidth+.22f,EditLength+.18f) &&
+                    !InsideBench(world,workshop.catalogue.position + Vector3.forward*.19f,1.30f,.8f);
             }
             var room=Api.GetRoom(visitorRoom);
             if(room==null) return false;
