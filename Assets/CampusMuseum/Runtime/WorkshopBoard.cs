@@ -89,19 +89,19 @@ namespace CampusMuseum
             {
                 int index=stopPage*3+i;
                 string label=$"{index+1}. {Short(Api.GetArtwork(tour.artworkIds[index])?.title,24)}";
-                BoardKey(board,label,1f,-.06f-i*.22f,1.87f,()=>{selectedStep=index;QueueDraw();},selectedStep==index?Teal:null);
+                BoardKey(board,label,1f,-.03f-i*.20f,1.87f,()=>{selectedStep=index;QueueDraw();},selectedStep==index?Teal:null);
             }
             if(count==0) Text(board,"Ajoute des étapes depuis Œuvres.",new Vector3(.03f,-.10f,-.08f),.078f,Cream);
             selectedStep=Mathf.Clamp(selectedStep,0,Mathf.Max(0,count-1));
             if(count>0)
             {
-                BoardKey(board,"↑",.31f,-.60f,.46f,()=>{if(selectedStep>0){Reorder(tour.id,selectedStep,selectedStep-1);selectedStep--;stopPage=selectedStep/3;}});
-                BoardKey(board,"↓",.83f,-.60f,.46f,()=>{if(selectedStep<count-1){Reorder(tour.id,selectedStep,selectedStep+1);selectedStep++;stopPage=selectedStep/3;}});
-                BoardKey(board,"Retirer",1.60f,-.60f,.90f,()=>RemoveStop(tour.id,selectedStep),Red);
+                BoardKey(board,"↑",.31f,-.65f,.46f,()=>{if(selectedStep>0){Reorder(tour.id,selectedStep,selectedStep-1);selectedStep--;stopPage=selectedStep/3;}});
+                BoardKey(board,"↓",.83f,-.65f,.46f,()=>{if(selectedStep<count-1){Reorder(tour.id,selectedStep,selectedStep+1);selectedStep++;stopPage=selectedStep/3;}});
+                BoardKey(board,"Retirer",1.60f,-.65f,.90f,()=>RemoveStop(tour.id,selectedStep),Red);
             }
-            BoardKey(board,"‹",.23f,-.81f,.32f,()=>{stopPage--;QueueDraw();});
-            BoardKey(board,"›",.61f,-.81f,.32f,()=>{stopPage++;QueueDraw();});
-            BoardKey(board,"Modifier",1.49f,-.81f,1.13f,()=>{editTour=true;QueueDraw();});
+            BoardKey(board,"‹",.23f,-.86f,.32f,()=>{stopPage--;QueueDraw();});
+            BoardKey(board,"›",.61f,-.86f,.32f,()=>{stopPage++;QueueDraw();});
+            BoardKey(board,"Modifier",1.49f,-.86f,1.13f,()=>{editTour=true;QueueDraw();});
         }
 
         void DrawArtworkBoard(Transform board)
@@ -152,15 +152,15 @@ namespace CampusMuseum
                 new Vector3(-1.87f,.22f,-.08f),.074f,Cream);
             Key(controls,drawing?"Arrêter le tracé":"Tracer une salle",-1.56f,.02f,.76f,.115f,()=>{
                 if(!WorkshopReady()) return;
-                drawing=!drawing; linking=false; corner=null;
+                drawing=!drawing; linking=false; linkFirstRoom=null; corner=null;
                 Tell(drawing?"Pointe le premier coin sur la table.":"Tracé annulé.");
             },Teal);
             Key(controls,"Tourner −15°",-.81f,.02f,.65f,.115f,()=>TurnRoom(-15));
             Key(controls,"Tourner +15°",-.11f,.02f,.65f,.115f,()=>TurnRoom(15));
             Key(controls,linking?"Annuler le lien":"Relier / délier",.62f,.02f,.71f,.115f,()=>{
-                if(!WorkshopReady() || selectedRoom==null) return;
-                linking=!linking; drawing=false; corner=null;
-                Tell(linking?"Pointe une deuxième salle.":"Création de lien annulée.");
+                if(!WorkshopReady()) return;
+                linking=!linking; linkFirstRoom=null; drawing=false; corner=null;
+                Tell(linking?"Pointe la première salle, puis la deuxième avec la gâchette index.":"Création de lien annulée.");
             });
             Key(controls,confirmDelete?"Confirmer":"Supprimer",1.45f,.02f,.82f,.115f,DeleteRoom,Red);
             Text(controls,"Saisir une poignée colorée pour régler les dimensions",new Vector3(-1.87f,-.19f,-.08f),.064f,Cream);

@@ -47,6 +47,7 @@ namespace CampusMuseum
         bool visiting;
         bool drawing;
         bool linking;
+        string linkFirstRoom;
         bool confirmDelete;
         Vector3? corner;
         Transform preview;
@@ -213,7 +214,7 @@ namespace CampusMuseum
                 if(room.id==selectedRoom && !drawing && !linking) DrawRoomHandles(room,root);
                 var pick = root.gameObject.AddComponent<WorldAction>();
                 pick.Direct=true;
-                pick.RequiresGrab=true;
+                pick.RequiresGrab=!linking;
                 pick.Press = h => SelectRoom(room,h,root);
                 pick.Release = DropRoom;
                 Text(root,Wrap(room.name,19,1),new Vector3(0,room.height*.12f,-room.length/2-.065f),
@@ -258,16 +259,23 @@ namespace CampusMuseum
             if (drawing) { Plot(hand.Ray); return; }
             if (linking)
             {
-                if (selectedRoom == null || selectedRoom == room.id)
+                if (linkFirstRoom == null)
                 {
-                    Tell("Choisis une autre salle sur la maquette.");
+                    linkFirstRoom=selectedRoom=room.id;
+                    Tell(room.name+" choisie. Pointe la deuxième salle.");
                     return;
                 }
-                var from = Api.GetRoom(selectedRoom);
+                if (linkFirstRoom == room.id)
+                {
+                    Tell("Choisis une salle différente pour terminer le lien.");
+                    return;
+                }
+                var from = Api.GetRoom(linkFirstRoom);
                 bool connected = from.connections.Contains(room.id);
                 if (connected) Api.DisconnectRooms(from.id,room.id);
                 else Api.ConnectRooms(from.id,room.id);
                 linking=false;
+                linkFirstRoom=null;
                 Tell(connected ? "Connexion retirée." : "Salles reliées dans les deux sens.");
                 return;
             }
