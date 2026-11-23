@@ -32,8 +32,12 @@ namespace CampusMuseum
             var pos=center+new Vector3(Mathf.Sin(angle),0,Mathf.Cos(angle))*radius;
             var tangent=new Vector3(Mathf.Cos(angle),0,-Mathf.Sin(angle));
             var arrow=StretchArrow.Create(stage,"Arc de rotation",pos-tangent*.04f,tangent,Teal);arrow.SetLength(.09f);
-            arrow.Bind(hand=>BeginRoomRotation(room,shell,hand),EndRoomRotation);
-            Text(stage,"90°",pos+Vector3.up*.06f,.043f,Color.white,TextAnchor.MiddleCenter);
+            var action=arrow.Bind(hand=>BeginRoomRotation(room,shell,hand),EndRoomRotation);
+            LabelPlate(stage,"Rotation · 90°",pos+Vector3.up*.09f,.34f,.072f,.034f);
+            var hint=LabelPlate(stage,"Maintenir Grab et tourner\npar crans de 90°",pos+Vector3.up*.21f,.50f,.13f,.031f);
+            hint.name="Aide poignée de rotation";
+            hint.gameObject.SetActive(false);
+            action.Focus=focused=>{if(hint)hint.gameObject.SetActive(focused);};
         }
 
         Vector3 RotationPoint(MuseumPlayer.Hand hand)
