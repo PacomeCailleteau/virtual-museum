@@ -149,6 +149,7 @@ namespace CampusMuseum
         void Draw()
         {
             dirty = false;
+            artworkViews.Clear();
             data = Api.Data;
             if (stage)
             {
@@ -233,6 +234,7 @@ namespace CampusMuseum
                 foreach (var art in data.artworks.Where(a => a.roomId == room.id))
                 {
                     var visual = Artwork(root,Api.Catalog,art);
+                    artworkViews[art.id]=visual;
                     Action(visual,h =>
                     {
                         if (drawing) Plot(h.Ray);

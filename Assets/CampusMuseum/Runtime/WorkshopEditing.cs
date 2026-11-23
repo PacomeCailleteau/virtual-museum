@@ -45,6 +45,8 @@ namespace CampusMuseum
             foreach(var art in draft.Api.GetArtworksInRoom(room.id))
             {
                 var visual=Artwork(artEditor,Api.Catalog,art);
+                artworkViews[art.id]=visual;
+                if(art.id==selectedArt)HighlightArtwork(visual,true);
                 var grab=Action(visual,h=>BeginArtwork(h,visual,art.id,null,art.localPosition),EndArtwork);
                 grab.Direct=true;
                 grab.RequiresGrab=true;

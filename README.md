@@ -55,11 +55,11 @@ Nous utilisons le même `MuseumApi` dans l’atelier et dans la visite. Quand no
 
 Nous conservons les œuvres déjà visitées séparément pour chaque parcours. Changer de parcours puis revenir au précédent garde les coches acquises. L’étape suivante est la première œuvre non visitée dans l’ordre du parcours. La sauvegarde enregistre le musée, la session courante et cet historique. Charger remet à jour les deux représentations.
 
-Au lancement, la maquette est vide. Le bouton « Charger » retrouve la sauvegarde de l’appareil. Pour recommencer une séance de test, « Nouvelle maquette vide » demande une confirmation et vide le musée en mémoire. Cette action ne supprime pas le fichier sauvegardé.
+Au lancement, la maquette est vide. Le survol ou la sélection du nom d’une œuvre sur le tableau la repère sur la maquette ou dans la salle agrandie. Le bouton « Charger » retrouve la sauvegarde de l’appareil. Pour recommencer une séance de test, « Nouvelle maquette vide » demande une confirmation et vide le musée en mémoire. Cette action ne supprime pas le fichier sauvegardé.
 
 ## Vérification des interactions
 
-Nous avons regroupé les contrôles de non régression dans `tests/test-workshop.csx` et `tests/test-visitor.csx`. Le premier part d’un lancement vide. Le second poursuit avec un musée de test en trois salles. Ils vérifient 47 points dans Unity, dont les refus de transformation, le geste du levier, les parcours indépendants, le retour entre salles et les suppressions suivies d’une nouvelle visite. Les scénarios remplacent seulement les données de la session Play et conservent le fichier d’historique présent avant le test.
+Nous avons regroupé les contrôles de non régression dans `tests/test-workshop.csx` et `tests/test-visitor.csx`. Le premier part d’un lancement vide. Le second poursuit avec un musée de test en trois salles. Ils vérifient 49 points dans Unity, dont les refus de transformation, le geste du levier, les parcours indépendants, le retour entre salles et les suppressions suivies d’une nouvelle visite. Les scénarios remplacent seulement les données de la session Play et conservent le fichier d’historique présent avant le test.
 
 Ces contrôles se lancent dans l’éditeur avec Unity Pipeline et le CLI Unity. Les sensations de prise, le confort et la lisibilité restent à vérifier avec les personnes portant le casque.
 

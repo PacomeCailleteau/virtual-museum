@@ -26,12 +26,12 @@ namespace CampusMuseum
         bool editTour;
         int selectedStep;
 
-        void BoardKey(Transform board,string label,float x,float y,float width,Action action,Color? color=null)
+        WorldAction BoardKey(Transform board,string label,float x,float y,float width,Action action,Color? color=null)
         {
             var key=Box(board,label,new Vector3(x,y,-.05f),new Vector3(width,.18f,.045f),color ?? Navy);
             key.GetComponent<Renderer>().sharedMaterial=MakeMaterial(color ?? new Color(.16f,.26f,.34f),true);
             Text(board,label,new Vector3(x,y,-.078f),Mathf.Min(.083f,width/Mathf.Max(label.Length*.54f,1f)),Color.white,TextAnchor.MiddleCenter);
-            Action(key,_=>action());
+            return Action(key,_=>action());
         }
 
         void DrawBoard()
@@ -115,9 +115,10 @@ namespace CampusMuseum
             for(int i=0;i<PageSize && artPage*PageSize+i<list.Count;i++)
             {
                 var item=list[artPage*PageSize+i];
-                BoardKey(board,Short(item.title,23),-1.12f,.13f-i*.22f,1.72f,()=>{
+                var key=BoardKey(board,Short(item.title,23),-1.12f,.13f-i*.22f,1.72f,()=>{
                     selectedArt=item.id;if(draft==null)selectedRoom=item.roomId;Tell(item.title);
                 },item.id==selectedArt?Teal:null);
+                key.Focus=focused=>HighlightArtworkById(item.id,focused);
             }
             BoardKey(board,"‹",-1.81f,-.79f,.32f,()=>{artPage--;QueueDraw();});
             BoardKey(board,"›",-1.43f,-.79f,.32f,()=>{artPage++;QueueDraw();});

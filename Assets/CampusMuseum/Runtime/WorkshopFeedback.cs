@@ -13,6 +13,12 @@ namespace CampusMuseum
         readonly Queue<(string Time,string Message,NoticeLevel Level)> notices=new();
         NoticeLevel noticeLevel;
         bool confirmEmpty;
+        readonly Dictionary<string,GameObject> artworkViews=new();
+
+        void HighlightArtworkById(string id,bool hovered)
+        {
+            if(artworkViews.TryGetValue(id,out var visual) && visual)HighlightArtwork(visual,hovered || id==selectedArt);
+        }
 
         void Tell(string message)
         {
