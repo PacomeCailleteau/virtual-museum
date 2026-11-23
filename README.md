@@ -2,7 +2,7 @@
 
 Nous avons réalisé Virtual Museum dans le cadre du cours RX à l’IMT Atlantique. Dans l’atelier, nous avons posé les salles miniatures sur une table pour pouvoir les prendre et les déplacer. Une porte donne accès au même musée à taille humaine.
 
-Nous avons placé les commandes dans le décor. Le tableau sert à préparer les parcours et à renseigner les fiches des œuvres. Les tiroirs servent à choisir les œuvres à exposer. Les panneaux des galeries donnent les informations utiles pendant la visite.
+Nous avons placé les commandes dans le décor. Le tableau, sur le mur de gauche, regroupe trois rubriques : parcours, œuvres et sauvegarde. Nous affichons les commandes de la rubrique choisie pour garder un écran lisible. Les tiroirs servent à choisir les œuvres à exposer. Les panneaux des galeries donnent les informations utiles pendant la visite.
 
 ## Ouvrir le projet
 
@@ -36,13 +36,13 @@ Pour modifier le décor du groupe, ouvrir `Assets/CampusMuseum/Resources/CampusM
 | Se téléporter | Maintenir le joystick droit vers l’avant, viser le sol et relâcher le joystick | T pour activer le mode, maintenir le clic gauche et relâcher sur une destination valide |
 | Tourner une œuvre | Orienter le rayon pendant la prise, ou utiliser le bouton Tourner | R pendant la prise, ou utiliser le bouton Tourner |
 
-Nous avons réduit les tables pour faciliter l’accès aux miniatures. Pour se téléporter, nous utilisons le fournisseur de téléportation du XR Interaction Toolkit. Une trajectoire courbe mène au repère d’arrivée. Le repère turquoise indique une destination accessible et sa barre dorée montre la direction du regard à l’arrivée. Une trajectoire rouge indique que la destination est refusée.
+Nous avons réduit les tables pour faciliter l’accès aux miniatures. Dans l’atelier, le point de vue et les contrôleurs sont relevés de 15 cm pour mieux voir les plateaux. La visite conserve la hauteur réelle. Une œuvre saisie au contact suit la main horizontalement au-dessus de la table d’édition. Nous conservons sa hauteur dans la salle, réglable avec les boutons Monter et Descendre. Pour se téléporter, nous utilisons le fournisseur de téléportation du XR Interaction Toolkit. Une trajectoire courbe mène au repère d’arrivée. Le repère turquoise indique une destination accessible et sa barre dorée montre la direction du regard à l’arrivée. Une trajectoire rouge indique que la destination est refusée.
 
 ## Essayer les deux modes
 
 1. Sélectionner une salle sur la maquette. Les commandes de la table permettent de la tourner et de la relier à une autre. Pour régler sa largeur, sa longueur ou sa hauteur, prendre une des trois poignées colorées et la tirer. Les dimensions suivent une grille de 0,5 m. Le repère devient rouge si le changement dépasse la table, recouvre une salle ou ferait sortir une œuvre. Pour en créer une, appuyer sur « Tracer une salle » puis pointer deux coins libres sur la table.
-2. Déposer une salle sur la table d’édition pour l’agrandir. Ouvrir un tiroir et placer une œuvre dans la salle. Pour modifier son titre ou sa description, pointer l’œuvre puis utiliser le tableau. Actionner le levier pour valider. Reprendre ensuite la salle à la taille de la maquette et la déposer sur le repère turquoise.
-3. Créer un parcours sur le tableau. Sélectionner les œuvres à visiter, puis ordonner les étapes. Le tracé apparaît sur la maquette. Le bouton « Sauver » enregistre la configuration du musée et la progression de la visite sur l’appareil.
+2. Déposer une salle sur la table d’édition pour l’agrandir. Ouvrir un tiroir et placer une œuvre dans la salle. Pour modifier son titre ou sa description, pointer l’œuvre puis utiliser le tableau. Actionner le levier pour valider. Appuyer ensuite sur « Replacer sur la maquette », sous la salle, pour la retrouver à son emplacement d’origine. Il reste possible de la rapporter à la main.
+3. Créer un parcours sur le tableau. Sélectionner les œuvres à visiter, puis ordonner les étapes. Le tracé apparaît sur la maquette. Dans la rubrique Sauvegarde, le bouton « Sauvegarder » enregistre la configuration du musée et la progression de la visite sur l’appareil.
 4. Passer par la porte « Visiter le musée ». Le panneau de la galerie permet de choisir une visite libre, de démarrer un parcours ou de le reprendre. Suivre les repères au sol et les portes jusqu’à l’œuvre attendue, puis valider l’étape à proximité.
 
 ## Organisation du code

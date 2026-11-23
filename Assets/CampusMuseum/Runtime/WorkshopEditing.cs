@@ -10,6 +10,8 @@ namespace CampusMuseum
         int openDrawer = -1;
         Vector3 artworkDropPosition;
         bool artworkCanDrop;
+        Vector3 artworkHandOffset;
+        float artworkHeight;
 
         void DrawEditor()
         {
@@ -32,7 +34,7 @@ namespace CampusMuseum
                     BeginRoomDrag(room,h,small);
                 };
                 grab.Release=DropRoom;
-                Key(rail,"Rapporte la salle sur le repère turquoise",0,-.066f,2.14f,.136f,()=>Tell("Prends la salle miniature et rapporte-la sur la maquette."));
+                Key(rail,"Replacer sur la maquette",0,-.066f,2.14f,.136f,ReturnEditedRoom,Teal);
                 return;
             }
 
@@ -102,16 +104,20 @@ namespace CampusMuseum
         {
             if(draft==null || heldArtwork || carriedView || resizingHand!=null) return;
             selectedArt=instanceId;
+            boardSection=BoardSection.Artworks;
             draggingId=instanceId;
             draggingDefinition=definitionId;
             heldArtwork=visual;
             artHand=hand;
+            artworkHeight=local.y;
+            artworkHandOffset=instanceId != null && hand.NearSelection
+                ? artEditor.TransformPoint(local)-hand.Ray.origin : Vector3.zero;
             draggingDirection=Vector3.ProjectOnPlane(hand.Ray.direction,Vector3.up);
             draggingOrientation=visual.transform.localRotation;
             draggingTurn=0f;
             foreach(var c in visual.GetComponentsInChildren<Collider>()) c.enabled=false;
             placement.Begin(hand.Ray, artEditor.TransformPoint(local), instanceId != null,
-                instanceId != null && hand.NearSelection);
+                hand.NearSelection);
             placementMarker = Box(stage, "Repère de dépôt", placement.Position,
                 new Vector3(.13f,.008f,.13f), Teal, false).GetComponent<Renderer>();
             UpdateArtworkDrag(0);
@@ -119,7 +125,16 @@ namespace CampusMuseum
 
         void UpdateArtworkDrag(float deltaTime)
         {
-            placement.Update(artHand.Ray, deltaTime);
+            var handPosition=artHand.Ray.origin;
+            bool aboveTable=InsideBench(handPosition,EditCenter,EditWidth+.16f,EditLength+.16f) &&
+                handPosition.y>EditCenter.y-.10f && handPosition.y<EditCenter.y+.80f;
+            if(artHand.NearSelection || aboveTable)
+            {
+                var target=handPosition+artworkHandOffset;
+                target.y=artEditor.TransformPoint(new Vector3(0,artworkHeight,0)).y;
+                placement.MoveTo(target,deltaTime);
+            }
+            else placement.Update(artHand.Ray, deltaTime);
             var room = draft.Api.GetRoom(draft.RoomId);
             var rawPosition = artEditor.InverseTransformPoint(placement.Position);
             var inside = MuseumLayout.ClampInside(room, rawPosition);
@@ -206,7 +221,15 @@ namespace CampusMuseum
             selectedArt=null;
             openDrawer=-1;
             activeField=TextField.None;
-            Tell(apply ? "Salle validée. Rapporte-la sur la maquette." : "Édition abandonnée. Rapporte la salle sur la maquette.");
+            Tell(apply ? "Salle validée. Utilise Replacer sur la maquette." : "Édition abandonnée. Utilise Replacer sur la maquette.");
+        }
+
+        void ReturnEditedRoom()
+        {
+            if(returningRoom==null || draft!=null || carriedView || heldArtwork || resizingHand!=null) return;
+            selectedRoom=returningRoom;
+            returningRoom=null;
+            Tell("Salle replacée à son emplacement sur la maquette.");
         }
     }
 }

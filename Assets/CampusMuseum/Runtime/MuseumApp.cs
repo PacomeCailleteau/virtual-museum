@@ -89,6 +89,7 @@ namespace CampusMuseum
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(.48f,.51f,.56f);
             player.Initialize(view);
+            player.ViewElevation=workshop.viewElevation;
             player.CanMove = () => true;
             player.CanStand = CanStand;
             player.Place(workshop.arrival.position, workshop.arrival.eulerAngles.y);

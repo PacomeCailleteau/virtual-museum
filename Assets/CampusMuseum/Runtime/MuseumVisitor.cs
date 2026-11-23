@@ -16,6 +16,7 @@ namespace CampusMuseum
             var room=data.rooms.FirstOrDefault();
             if(room==null) {Tell("Crée une salle avant de visiter.");return;}
             visiting=true;
+            player.ViewElevation=0f;
             guided=false;
             status="Choisis un parcours sur le panneau d’accueil ou visite librement.";
             MoveToRoom(room);
@@ -24,6 +25,7 @@ namespace CampusMuseum
         void BackToWorkshop()
         {
             visiting=false;
+            player.ViewElevation=workshop.viewElevation;
             visitorArt=null;
             player.Place(workshop.arrival.position, workshop.arrival.eulerAngles.y);
             Tell("De retour à l’atelier.");

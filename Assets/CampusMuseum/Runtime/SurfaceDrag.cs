@@ -42,6 +42,13 @@ namespace CampusMuseum
             timeWithoutAim = 0;
             CanPlace = true;
             var target = point + offset;
+            MoveTo(target, deltaTime);
+        }
+
+        public void MoveTo(Vector3 target, float deltaTime)
+        {
+            timeWithoutAim = 0;
+            CanPlace = true;
             if (followFirstAim)
             {
                 Position = target;

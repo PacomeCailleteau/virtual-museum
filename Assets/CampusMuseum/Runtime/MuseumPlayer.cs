@@ -55,6 +55,16 @@ namespace CampusMuseum
         public Transform Eye => head;
         public Transform Space => transform;
         public bool TeleportMode { get; set; }
+        float viewElevation;
+        public float ViewElevation
+        {
+            get => viewElevation;
+            set
+            {
+                if(head) head.localPosition += Vector3.up*(value-viewElevation);
+                viewElevation=value;
+            }
+        }
         public Func<Vector3, bool> CanStand;
         public Func<bool> CanMove;
         Transform head;
@@ -73,7 +83,7 @@ namespace CampusMuseum
             head = playerCamera.transform;
             var origin = playerCamera.GetComponentInParent<XROrigin>();
             head.SetParent(transform, false);
-            head.localPosition = Vector3.up * 1.65f;
+            head.localPosition = Vector3.up * (1.65f+viewElevation);
             head.localRotation = Quaternion.identity;
             foreach (var behaviour in head.GetComponents<Behaviour>())
                 if (behaviour.GetType().Name == "TrackedPoseDriver") behaviour.enabled = false;
@@ -165,7 +175,7 @@ namespace CampusMuseum
                         }
                 }
                 if (hmd.TryGetFeatureValue(UnityEngine.XR.CommonUsages.devicePosition, out var p))
-                    head.localPosition = p + (floorTracked ? Vector3.zero : Vector3.up * 1.65f);
+                    head.localPosition = p + Vector3.up*viewElevation + (floorTracked ? Vector3.zero : Vector3.up * 1.65f);
                 if (hmd.TryGetFeatureValue(UnityEngine.XR.CommonUsages.deviceRotation, out var q))
                     head.localRotation = q;
 
@@ -222,7 +232,7 @@ namespace CampusMuseum
                     rotation = hand.aimRotation.ReadValue<Quaternion>();
                 }
                 else rotation *= Quaternion.Euler(-40f,0,0);
-                var world = transform.TransformPoint(position + (floorTracked ? Vector3.zero : Vector3.up * 1.65f));
+                var world = transform.TransformPoint(position + Vector3.up*viewElevation + (floorTracked ? Vector3.zero : Vector3.up * 1.65f));
                 var orientation = transform.rotation * rotation;
                 hand.controller.SetPositionAndRotation(world, orientation);
                 hand.Ray = new Ray(world + orientation * Vector3.forward * .055f, orientation * Vector3.forward);

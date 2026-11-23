@@ -175,6 +175,7 @@ MonoBehaviour:
   catalogue: {fileID: 8261599146709152522}
   exit: {fileID: 7054758557371476336}
   arrival: {fileID: 2474272466775025050}
+  viewElevation: 0.15
 --- !u!1 &695099565576307947
 GameObject:
   m_ObjectHideFlags: 0
@@ -558,9 +559,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1545434571105691801}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.85, y: 2.03, z: 1.77}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: -3.55, y: 1.7, z: -0.15}
+  m_LocalScale: {x: 0.72, y: 0.72, z: 0.72}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6321474768275605634}
@@ -3636,7 +3637,7 @@ GameObject:
   - component: {fileID: 3728118078557895158}
   - component: {fileID: 4322640159272232060}
   m_Layer: 0
-  m_Name: "ATELIER   /   PARCOURS ET \u0152UVRES"
+  m_Name: Titre du tableau
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3651,7 +3652,7 @@ Transform:
   m_GameObject: {fileID: 8253382359739087107}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.03, y: 0.83, z: -0.08}
+  m_LocalPosition: {x: -1.96, y: 0.83, z: -0.08}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3714,9 +3715,9 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8253382359739087107}
-  m_Text: "ATELIER   /   PARCOURS ET \u0152UVRES"
+  m_Text: ATELIER
   m_OffsetZ: 0
-  m_CharacterSize: 0.01554
+  m_CharacterSize: 0.01776
   m_LineSpacing: 1
   m_Anchor: 3
   m_Alignment: 0
@@ -3727,7 +3728,7 @@ TextMesh:
   m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
   m_Color:
     serializedVersion: 2
-    rgba: 4291288032
+    rgba: 4294967295
 --- !u!1 &8442915322497718823
 GameObject:
   m_ObjectHideFlags: 0

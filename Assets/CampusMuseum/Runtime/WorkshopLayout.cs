@@ -15,5 +15,6 @@ namespace CampusMuseum
         public Transform catalogue;
         public GameObject exit;
         public Transform arrival;
+        [Range(0f,.35f)] public float viewElevation = .15f;
     }
 }

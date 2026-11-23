@@ -21,78 +21,115 @@ namespace CampusMuseum
         string draggingDefinition;
         const int PageSize = 4;
 
+        enum BoardSection { Tours, Artworks, Storage }
+        BoardSection boardSection;
+        bool editTour;
+        int selectedStep;
+
+        void BoardKey(Transform board,string label,float x,float y,float width,Action action,Color? color=null)
+        {
+            var key=Box(board,label,new Vector3(x,y,-.05f),new Vector3(width,.18f,.045f),color ?? Navy);
+            key.GetComponent<Renderer>().sharedMaterial=MakeMaterial(color ?? new Color(.16f,.26f,.34f),true);
+            Text(board,label,new Vector3(x,y,-.078f),Mathf.Min(.083f,width/Mathf.Max(label.Length*.54f,1f)),Color.white,TextAnchor.MiddleCenter);
+            Action(key,_=>action());
+        }
+
         void DrawBoard()
         {
-            var board = WorkshopContent(workshop.board);
-            Text(board,Wrap(status,69,2),new Vector3(-2.03f,.65f,-.08f),.061f,Teal);
-            if(activeField != TextField.None) { DrawKeyboard(board); return; }
-
-            var tour = Api.GetTour(selectedTour);
-            var list = data.tours;
-            tourPage = Mathf.Clamp(tourPage,0,Mathf.Max(0,(list.Count-1)/PageSize));
-            Text(board,"PARCOURS",new Vector3(-2.03f,.46f,-.08f),.071f,Cream);
+            var board=WorkshopContent(workshop.board);
+            RoomControls();
+            if(activeField!=TextField.None) { DrawKeyboard(board); return; }
+            var sections=new[]{"Parcours","Œuvres","Sauvegarde"};
+            for(int i=0;i<sections.Length;i++)
+            {
+                var section=(BoardSection)i;
+                BoardKey(board,sections[i],-1.36f+i*1.36f,.61f,1.26f,()=>{boardSection=section;QueueDraw();},boardSection==section?Teal:null);
+            }
+            Text(board,Wrap(status,65,2),new Vector3(-1.96f,.37f,-.08f),.078f,Teal);
+            if(boardSection==BoardSection.Storage)
+            {
+                Text(board,"Retrouver le musée et la progression de la visite",new Vector3(-1.85f,.09f,-.08f),.09f,Cream);
+                BoardKey(board,"Sauvegarder",-.95f,-.20f,1.65f,SaveMuseum,Teal);
+                BoardKey(board,"Charger",.95f,-.20f,1.65f,LoadMuseum);
+                Text(board,"Valide et replace la salle avant de sauvegarder.",new Vector3(-1.85f,-.49f,-.08f),.085f,Cream);
+                return;
+            }
+            if(boardSection==BoardSection.Artworks) { DrawArtworkBoard(board); return; }
+            var list=data.tours;
+            tourPage=Mathf.Clamp(tourPage,0,Mathf.Max(0,(list.Count-1)/PageSize));
             for(int i=0;i<PageSize && tourPage*PageSize+i<list.Count;i++)
             {
                 var item=list[tourPage*PageSize+i];
-                Key(board,Short(item.name,21),-1.52f,.30f-i*.15f,1.02f,.126f,()=>{
-                    selectedTour=item.id; stopPage=0; Tell(item.name);
-                },item.id==selectedTour ? Teal : Quiet);
+                BoardKey(board,Short(item.name,23),-1.12f,.13f-i*.22f,1.72f,()=>{
+                    selectedTour=item.id;stopPage=selectedStep=0;editTour=false;Tell(item.name);
+                },item.id==selectedTour?Teal:null);
             }
-            Key(board,"Préc.",-1.88f,-.33f,.29f,.115f,()=>{tourPage--;QueueDraw();});
-            Key(board,"Suiv.",-1.55f,-.33f,.29f,.115f,()=>{tourPage++;QueueDraw();});
-            Key(board,"Créer",-1.20f,-.33f,.33f,.115f,CreateTour,Teal);
-            if(tour != null)
+            BoardKey(board,"‹",-1.81f,-.79f,.32f,()=>{tourPage--;QueueDraw();});
+            BoardKey(board,"›",-1.43f,-.79f,.32f,()=>{tourPage++;QueueDraw();});
+            BoardKey(board,"Créer",-.70f,-.79f,.98f,CreateTour,Teal);
+            var tour=Api.GetTour(selectedTour);
+            if(tour==null)
             {
-                Text(board,Wrap(tour.description,28,2),new Vector3(-2.03f,-.48f,-.08f),.058f,Cream);
-                Key(board,"Nom",-1.82f,-.65f,.39f,.118f,()=>BeginText(TextField.TourName,tour.name));
-                Key(board,"Description",-1.35f,-.65f,.48f,.118f,()=>BeginText(TextField.TourDescription,tour.description));
-                Key(board,"Supprimer",-1.50f,-.80f,.99f,.12f,()=>DeleteTour(tour.id),Red);
+                Text(board,"Choisis un parcours\nou crées-en un nouveau.",new Vector3(.03f,-.05f,-.08f),.095f,Cream);
+                return;
             }
+            Text(board,Short(tour.name,26),new Vector3(.03f,.16f,-.08f),.10f,Cream);
+            if(editTour)
+            {
+                Text(board,Wrap(tour.description,36,2),new Vector3(.03f,-.02f,-.08f),.078f,Cream);
+                BoardKey(board,"Renommer",1f,-.24f,1.87f,()=>BeginText(TextField.TourName,tour.name));
+                BoardKey(board,"Description",1f,-.46f,1.87f,()=>BeginText(TextField.TourDescription,tour.description));
+                BoardKey(board,"Supprimer",.53f,-.79f,.94f,()=>DeleteTour(tour.id),Red);
+                BoardKey(board,"Étapes",1.53f,-.79f,.94f,()=>{editTour=false;QueueDraw();});
+                return;
+            }
+            int count=tour.artworkIds.Count;
+            stopPage=Mathf.Clamp(stopPage,0,Mathf.Max(0,(count-1)/3));
+            for(int i=0;i<3 && stopPage*3+i<count;i++)
+            {
+                int index=stopPage*3+i;
+                string label=$"{index+1}. {Short(Api.GetArtwork(tour.artworkIds[index])?.title,24)}";
+                BoardKey(board,label,1f,-.06f-i*.22f,1.87f,()=>{selectedStep=index;QueueDraw();},selectedStep==index?Teal:null);
+            }
+            if(count==0) Text(board,"Ajoute des étapes depuis Œuvres.",new Vector3(.03f,-.10f,-.08f),.078f,Cream);
+            selectedStep=Mathf.Clamp(selectedStep,0,Mathf.Max(0,count-1));
+            if(count>0)
+            {
+                BoardKey(board,"↑",.31f,-.60f,.46f,()=>{if(selectedStep>0){Reorder(tour.id,selectedStep,selectedStep-1);selectedStep--;stopPage=selectedStep/3;}});
+                BoardKey(board,"↓",.83f,-.60f,.46f,()=>{if(selectedStep<count-1){Reorder(tour.id,selectedStep,selectedStep+1);selectedStep++;stopPage=selectedStep/3;}});
+                BoardKey(board,"Retirer",1.60f,-.60f,.90f,()=>RemoveStop(tour.id,selectedStep),Red);
+            }
+            BoardKey(board,"‹",.23f,-.81f,.32f,()=>{stopPage--;QueueDraw();});
+            BoardKey(board,"›",.61f,-.81f,.32f,()=>{stopPage++;QueueDraw();});
+            BoardKey(board,"Modifier",1.49f,-.81f,1.13f,()=>{editTour=true;QueueDraw();});
+        }
 
-            Text(board,"ÉTAPES",new Vector3(-.93f,.46f,-.08f),.071f,Cream);
-            int stopCount=tour?.artworkIds.Count ?? 0;
-            stopPage=Mathf.Clamp(stopPage,0,Mathf.Max(0,(stopCount-1)/PageSize));
-            for(int i=0;i<PageSize && stopPage*PageSize+i<stopCount;i++)
+        void DrawArtworkBoard(Transform board)
+        {
+            var api=draft?.Api ?? Api;
+            var list=api.Data.artworks;
+            artPage=Mathf.Clamp(artPage,0,Mathf.Max(0,(list.Count-1)/PageSize));
+            for(int i=0;i<PageSize && artPage*PageSize+i<list.Count;i++)
             {
-                var index=stopPage*PageSize+i;
-                var id=tour.artworkIds[index];
-                var title=Api.GetArtwork(id)?.title ?? "Œuvre";
-                var y=.30f-i*.15f;
-                Text(board,$"{index+1}. {Short(title,17)}",new Vector3(-.93f,y,-.08f),.055f,Cream);
-                if(index>0) Key(board,"▲",-.01f,y,.15f,.115f,()=>Reorder(tour.id,index,index-1));
-                if(index<stopCount-1) Key(board,"▼",.16f,y,.15f,.115f,()=>Reorder(tour.id,index,index+1));
-                Key(board,"×",.33f,y,.15f,.115f,()=>RemoveStop(tour.id,index),Red);
+                var item=list[artPage*PageSize+i];
+                BoardKey(board,Short(item.title,23),-1.12f,.13f-i*.22f,1.72f,()=>{
+                    selectedArt=item.id;if(draft==null)selectedRoom=item.roomId;Tell(item.title);
+                },item.id==selectedArt?Teal:null);
             }
-            Key(board,"Préc.",-.76f,-.33f,.31f,.115f,()=>{stopPage--;QueueDraw();});
-            Key(board,"Suiv.",-.42f,-.33f,.31f,.115f,()=>{stopPage++;QueueDraw();});
-            Key(board,"Ajouter l’œuvre",-.25f,-.49f,1.32f,.13f,AddStop,Teal);
-
-            var artList=(draft?.Api.Data ?? data).artworks;
-            artPage=Mathf.Clamp(artPage,0,Mathf.Max(0,(artList.Count-1)/PageSize));
-            Text(board,"ŒUVRES PLACÉES",new Vector3(.55f,.46f,-.08f),.071f,Cream);
-            for(int i=0;i<PageSize && artPage*PageSize+i<artList.Count;i++)
+            BoardKey(board,"‹",-1.81f,-.79f,.32f,()=>{artPage--;QueueDraw();});
+            BoardKey(board,"›",-1.43f,-.79f,.32f,()=>{artPage++;QueueDraw();});
+            var art=api.GetArtwork(selectedArt);
+            if(art==null)
             {
-                var item=artList[artPage*PageSize+i];
-                Key(board,Short(item.title,24),1.28f,.30f-i*.15f,1.46f,.126f,()=>{
-                    selectedArt=item.id;
-                    if(draft==null) selectedRoom=item.roomId;
-                    Tell(item.title);
-                },item.id==selectedArt ? Teal : Quiet);
+                Text(board,"Choisis une œuvre\npour consulter sa fiche.",new Vector3(.03f,-.05f,-.08f),.095f,Cream);
+                return;
             }
-            Key(board,"Préc.",.73f,-.33f,.34f,.115f,()=>{artPage--;QueueDraw();});
-            Key(board,"Suiv.",1.10f,-.33f,.34f,.115f,()=>{artPage++;QueueDraw();});
-            var art=(draft?.Api ?? Api).GetArtwork(selectedArt);
-            if(art != null)
-            {
-                Text(board,Wrap(art.description,34,2),new Vector3(.55f,-.48f,-.08f),.057f,Cream);
-                Key(board,"Titre",.75f,-.65f,.36f,.113f,()=>BeginText(TextField.Title,art.title));
-                Key(board,"Description",1.21f,-.65f,.50f,.113f,()=>BeginText(TextField.Description,art.description));
-                Key(board,"Retirer",1.76f,-.65f,.48f,.113f,RemoveArtwork,Red);
-            }
-            Text(board,"MUSÉE",new Vector3(.55f,-.80f,-.08f),.058f,Cream);
-            Key(board,"Sauver",1.25f,-.80f,.51f,.12f,SaveMuseum,Teal);
-            Key(board,"Charger",1.79f,-.80f,.49f,.12f,LoadMuseum);
-            RoomControls();
+            Text(board,Short(art.title,27),new Vector3(.03f,.16f,-.08f),.10f,Cream);
+            Text(board,Wrap(art.description,37,4),new Vector3(.03f,-.10f,-.08f),.083f,Cream);
+            BoardKey(board,"Titre",.35f,-.56f,.60f,()=>BeginText(TextField.Title,art.title));
+            BoardKey(board,"Description",1.09f,-.56f,.80f,()=>BeginText(TextField.Description,art.description));
+            BoardKey(board,"Retirer",1.78f,-.56f,.53f,RemoveArtwork,Red);
+            BoardKey(board,"Ajouter au parcours",1f,-.80f,1.87f,AddStop,Teal);
         }
 
         static Transform Panel(Transform parent,string name,Vector3 world,float w,float h)
@@ -150,7 +187,8 @@ namespace CampusMuseum
             if (Api.GetTour(selectedTour)==null || Api.GetArtwork(selectedArt)==null)
             { Tell("Choisis un parcours et une œuvre placée."); return; }
             Api.AddTourArtwork(selectedTour,selectedArt);
-            stopPage=(Api.GetTour(selectedTour).artworkIds.Count-1)/PageSize;
+            selectedStep=Api.GetTour(selectedTour).artworkIds.Count-1;
+            stopPage=selectedStep/3;
             Tell("Étape ajoutée à la fin.");
         }
 
@@ -165,14 +203,14 @@ namespace CampusMuseum
         {
             if(!WorkshopReady()) return;
             Api.ReorderTourArtwork(tour,from,to);
-            stopPage=to/PageSize;
+            stopPage=to/3;
             Tell("Ordre des étapes modifié.");
         }
 
         bool WorkshopReady()
         {
             if(draft == null && returningRoom == null && !carriedView && !heldArtwork && resizingHand==null) return true;
-            Tell("Valide ou annule l’édition, puis rapporte la salle sur la maquette.");
+            Tell("Valide ou annule l’édition, puis replace la salle sur la maquette.");
             return false;
         }
 
