@@ -74,7 +74,9 @@ namespace CampusMuseum
             if (!workshop)
                 workshop = Instantiate(Resources.Load<GameObject>("CampusMuseum/Workshop")).GetComponent<WorkshopLayout>();
             foreach (var label in workshop.GetComponentsInChildren<TextMesh>()) UseWorldText(label);
-            Action(workshop.mapSurface.gameObject, hand => Plot(hand.Ray));
+            var surface=workshop.mapSurface.gameObject.AddComponent<WorldAction>();
+            surface.Available=()=>drawing;
+            surface.Press=BeginRoomTrace;surface.Release=EndRoomTrace;
             Action(workshop.exit, _ => EnterMuseum());
             view = Camera.main ? Camera.main : FindFirstObjectByType<Camera>();
             if (!view)
@@ -97,6 +99,8 @@ namespace CampusMuseum
             Api.Changed += OnModelChanged;
             Api.SessionChanged += QueueDraw;
             if(workshop.startWithEmptyMuseum) Api.Replace(new Museum(),new VisitorSession());
+            else Api.ResetToExample();
+            InitializeBuzzers();
             data = Api.Data;
             selectedRoom = data.rooms.FirstOrDefault()?.id;
             selectedTour = data.tours.FirstOrDefault()?.id;
@@ -117,8 +121,11 @@ namespace CampusMuseum
         void Update()
         {
             if (!player) return;
-            if (dirty && !carriedView && !heldArtwork && resizingHand==null && rotatingHand==null && leverHand==null) Draw();
+            if (dirty && !carriedView && !heldArtwork && resizingHand==null && rotatingHand==null && leverHand==null && traceHand==null && tagHand==null) Draw();
             player.Tick();
+            if(!player.IsTracked)TickResetKeys();
+            if(tagHand!=null)UpdateMagneticTag();
+            if(boardNotice!=null && Time.unscaledTime>boardNoticeUntil){boardNotice=null;QueueDraw();}
             if (resizingHand!=null) UpdateRoomResize();
             if (rotatingHand!=null) UpdateRoomRotation();
             if (leverHand!=null) UpdateValidationLever();
@@ -131,19 +138,7 @@ namespace CampusMuseum
             }
             if (carriedView) UpdateRoomDrag(Time.unscaledDeltaTime);
             if (heldArtwork) UpdateArtworkDrag(Time.unscaledDeltaTime);
-            if (drawing && corner.HasValue && preview)
-            {
-                var hand = player.Right;
-                if (HitPlane(hand.Ray,MapCenter.y,out var end) && InsideBench(end,MapCenter,MapWidth,MapLength))
-                {
-                    var a = corner.Value;
-                    preview.position = (a + end) / 2 + Vector3.up * .015f;
-                    preview.localScale = new Vector3(Mathf.Abs(end.x-a.x), .025f, Mathf.Abs(end.z-a.z));
-                    var width = preview.localScale.x / Scale;
-                    var length = preview.localScale.z / Scale;
-                    previewDimensions.text = $"{width * length:0.#} m²   ·   {3f * width * length:0.#} m³";
-                }
-            }
+            if(traceHand!=null)UpdateRoomTrace();
         }
 
         void Draw()
@@ -192,11 +187,6 @@ namespace CampusMuseum
             DrawEditor();
             DrawBoard();
             DrawTerminal();
-            if (drawing && corner.HasValue)
-            {
-                preview = Box(stage,"Emprise de la salle",corner.Value + Vector3.up*.016f,new Vector3(.05f,.025f,.05f),Teal,false).transform;
-                previewDimensions = Text(stage,"",MapCenter + new Vector3(0,.16f,-MapLength/2),.09f,Navy,TextAnchor.MiddleCenter);
-            }
             Physics.SyncTransforms();
         }
 
@@ -217,7 +207,8 @@ namespace CampusMuseum
                 if (room.id == draft?.RoomId || room.id == returningRoom)
                 {
                     var marker = Box(stage,"Place de retour",OnMap(room.position)+Vector3.up*.015f,
-                        new Vector3(room.width*Scale,.02f, room.length*Scale),Teal,false);
+                        new Vector3(room.width*Scale,.02f, room.length*Scale),Quiet,false);
+                    returnMarker=marker.GetComponent<Renderer>();
                     marker.transform.rotation = room.rotation;
                     continue;
                 }
@@ -226,23 +217,17 @@ namespace CampusMuseum
                 if(room.id==selectedRoom && !drawing && !linking) DrawRoomHandles(room,root);
                 var pick = root.gameObject.AddComponent<WorldAction>();
                 pick.Direct=true;
-                pick.RequiresGrab=!linking;
-                pick.Press = h => SelectRoom(room,h,root);
-                pick.Release = DropRoom;
+                pick.RequiresGrab=!linking && !drawing;
+                pick.AllowDistance=!linking && !drawing;
+                pick.Press = h => {if(drawing)BeginRoomTrace(h);else SelectRoom(room,h,root);};
+                pick.Release = h => {if(traceHand==h)EndRoomTrace(h);else DropRoom(h);};
                 Text(root,Wrap(room.name,19,1),new Vector3(0,room.height*.12f,-room.length/2-.065f),
                     Mathf.Min(.37f,room.width/18f),Color.white,TextAnchor.MiddleCenter);
                 foreach (var art in data.artworks.Where(a => a.roomId == room.id))
                 {
                     var visual = Artwork(root,Api.Catalog,art);
                     artworkViews[art.id]=visual;
-                    Action(visual,h =>
-                    {
-                        if (drawing) Plot(h.Ray);
-                        else if (linking) SelectRoom(room,h,root);
-                        else { selectedRoom=room.id; selectedArt=art.id; activeField=TextField.None; Tell(art.title); }
-                    });
-                    var artAction=visual.GetComponent<WorldAction>();
-                    artAction.Focus=focused=>HighlightArtwork(visual,focused || art.id==selectedArt);
+                    foreach(var collider in visual.GetComponentsInChildren<Collider>())collider.enabled=false;
                     if(art.id==selectedArt) HighlightArtwork(visual,true);
                     if (tour != null)
                     {
@@ -272,7 +257,7 @@ namespace CampusMuseum
 
         void SelectRoom(Room room, MuseumPlayer.Hand hand, Transform visual)
         {
-            if (drawing) { Plot(hand.Ray); return; }
+            if (drawing) { BeginRoomTrace(hand); return; }
             if (linking)
             {
                 if (linkFirstRoom == null)
@@ -309,12 +294,13 @@ namespace CampusMuseum
 
         void BeginRoomDrag(Room room, MuseumPlayer.Hand hand, Transform visual)
         {
+            hand.Reach=.035f;
             carriedRoom = room;
             roomCandidate = Api.GetRoom(room.id);
             carrier = hand;
             carriedView = visual;
             foreach (var collider in visual.GetComponentsInChildren<Collider>()) collider.enabled = false;
-            placement.Begin(hand.Ray, new Vector3(hand.Ray.origin.x,MapCenter.y,hand.Ray.origin.z), false, true);
+            placement.Begin(hand.Ray, new Vector3(hand.CarryPoint.x,MapCenter.y,hand.CarryPoint.z), false, true);
             placementMarker = Box(stage, "Repère de dépôt", visual.position,
                 new Vector3(room.width * Scale + .035f, .012f, room.length * Scale + .035f), Teal, false).GetComponent<Renderer>();
             UpdateRoomDrag(0);
@@ -322,18 +308,20 @@ namespace CampusMuseum
 
         void UpdateRoomDrag(float deltaTime)
         {
-            var handPoint=carrier.Ray.origin;
+            var previousCarry=carriedView.position;
+            var handPoint=carrier.CarryPoint;
             var height=InsideBench(handPoint,EditCenter,EditWidth,EditLength)?EditCenter.y:MapCenter.y;
             placement.MoveTo(new Vector3(handPoint.x,height,handPoint.z),deltaTime);
             var point = placement.Position;
-            carriedView.position = handPoint + carrier.Ray.direction*.035f;
+            carriedView.position = handPoint;
             roomDrop = RoomDrop.None;
             if (placement.CanPlace && InsideBench(point, MapCenter, MapWidth, MapLength))
             {
                 if (returningRoom == carriedRoom.id)
                 {
-                    if ((point - OnMap(carriedRoom.position)).sqrMagnitude <= .22f * .22f)
-                        roomDrop = RoomDrop.Return;
+                    var local=Quaternion.Inverse(carriedRoom.rotation)*(point-OnMap(carriedRoom.position));
+                    if(Mathf.Abs(local.x)<carriedRoom.width*Scale/2+.14f && Mathf.Abs(local.z)<carriedRoom.length*Scale/2+.14f)
+                        roomDrop=RoomDrop.Return;
                 }
                 else
                 {
@@ -348,6 +336,8 @@ namespace CampusMuseum
                 roomDrop = RoomDrop.Edit;
             }
 
+            if(returnMarker)returnMarker.sharedMaterial=MakeMaterial(roomDrop==RoomDrop.Return?Teal:Quiet,true);
+            if(roomDrop==RoomDrop.Return)carriedView.position=Vector3.Lerp(previousCarry,OnMap(carriedRoom.position)+Vector3.up*.06f,1f-Mathf.Exp(-deltaTime/.06f));
             var markerPoint = roomDrop == RoomDrop.Return ? OnMap(carriedRoom.position)
                 : roomDrop==RoomDrop.Map ? OnMap(roomCandidate.position) : point;
             placementMarker.transform.SetPositionAndRotation(markerPoint + Vector3.up * .012f, carriedRoom.rotation);
@@ -394,31 +384,6 @@ namespace CampusMuseum
                     if (!InsideBench(OnMap(room.position+room.rotation*new Vector3(x,0,z)),MapCenter,MapWidth-.12f,MapLength-.12f))
                         return false;
             return true;
-        }
-
-        void Plot(Ray ray)
-        {
-            if (!drawing || !HitPlane(ray, MapCenter.y, out var point)) return;
-            if (!InsideBench(point,MapCenter,MapWidth,MapLength)) return;
-            if (!corner.HasValue)
-            {
-                corner=point;
-                Tell("Pointe le coin opposé de la salle.");
-                return;
-            }
-            var first=corner.Value;
-            var size=(point-first)/Scale;
-            var room=new Room { position=InMuseum((point+first)/2f), width=Mathf.Abs(size.x), length=Mathf.Abs(size.z), height=3 };
-            if (room.width < 2 || room.length < 2 || !FitsTable(room) || MuseumLayout.Overlaps(room,data.rooms))
-            {
-                Tell("Prévois au moins 2 m de côté et un emplacement libre.");
-                return;
-            }
-            var created=Api.CreateRoom("Galerie "+(data.rooms.Count+1),room.position,room.width,room.length,room.height);
-            selectedRoom=created.id;
-            drawing=false;
-            corner=null;
-            Tell(created.name + " créée.");
         }
 
         void DeleteRoom()

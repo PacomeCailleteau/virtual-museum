@@ -16,28 +16,34 @@ namespace CampusMuseum
         string rotationError;
         float rotationAngle;
         float rotationScale;
+        Transform rotationRig;
+        TextMesh rotationHelp;
 
         void DrawRoomRotation(Room room,Transform shell)
         {
             if(draft!=null)return;
             float radius=Mathf.Max(room.width,room.length)*shell.lossyScale.x*.5f+.075f;
             var center=shell.position+Vector3.up*.035f;
+            rotationRig=Root(stage,"Commande de rotation",center);
+            rotationRig.rotation=room.rotation;
             for(int i=0;i<24;i++)
             {
                 float a=Mathf.Lerp(195,345,i/24f)*Mathf.Deg2Rad,b=Mathf.Lerp(195,345,(i+1)/24f)*Mathf.Deg2Rad;
-                Line(stage,center+new Vector3(Mathf.Sin(a),0,Mathf.Cos(a))*radius,
-                    center+new Vector3(Mathf.Sin(b),0,Mathf.Cos(b))*radius,.008f,Teal);
+                var from=new Vector3(Mathf.Sin(a),0,Mathf.Cos(a))*radius;
+                var to=new Vector3(Mathf.Sin(b),0,Mathf.Cos(b))*radius;
+                Line(rotationRig,Vector3.zero,Vector3.zero,.008f,Teal);
+                var line=rotationRig.GetChild(rotationRig.childCount-1).GetComponent<LineRenderer>();
+                line.useWorldSpace=false;line.SetPosition(0,from);line.SetPosition(1,to);
             }
             float angle=225*Mathf.Deg2Rad;
-            var pos=center+new Vector3(Mathf.Sin(angle),0,Mathf.Cos(angle))*radius;
-            var tangent=new Vector3(Mathf.Cos(angle),0,-Mathf.Sin(angle));
-            var arrow=StretchArrow.Create(stage,"Arc de rotation",pos-tangent*.04f,tangent,Teal);arrow.SetLength(.09f);
+            var pos=rotationRig.TransformPoint(new Vector3(Mathf.Sin(angle),0,Mathf.Cos(angle))*radius);
+            var tangent=rotationRig.TransformDirection(new Vector3(Mathf.Cos(angle),0,-Mathf.Sin(angle)));
+            var arrow=StretchArrow.Create(rotationRig,"Arc de rotation",pos-tangent*.04f,tangent,Teal);arrow.SetLength(.09f);
             var action=arrow.Bind(hand=>BeginRoomRotation(room,shell,hand),EndRoomRotation);
-            LabelPlate(stage,"Rotation · 90°",pos+Vector3.up*.09f,.34f,.072f,.034f);
-            var hint=LabelPlate(stage,"Maintenir Grab et tourner\npar crans de 90°",pos+Vector3.up*.21f,.50f,.13f,.031f);
-            hint.name="Aide poignée de rotation";
-            hint.gameObject.SetActive(false);
-            action.Focus=focused=>{if(hint)hint.gameObject.SetActive(focused);};
+            action.Focus=focused=>
+            {
+                if(rotationHelp){rotationHelp.text=focused?"Rotation : maintenir Grab et tourner par quarts de tour":"Flèches : dimensions · Arc : rotation par quarts de tour";rotationHelp.color=focused?Teal:Cream;}
+            };
         }
 
         Vector3 RotationPoint(MuseumPlayer.Hand hand)
@@ -64,6 +70,7 @@ namespace CampusMuseum
             if(Mathf.Approximately(angle,rotationAngle))return;
             rotationAngle=angle;
             rotatingCandidate.rotation=Quaternion.AngleAxis(angle,Vector3.up)*rotatingOriginal.rotation;
+            if(rotationRig)rotationRig.rotation=rotatingCandidate.rotation;
             rotationError=(!FitsTable(rotatingCandidate)||MuseumLayout.Overlaps(rotatingCandidate,data.rooms))
                 ?"Rotation refusée : espace insuffisant.":null;
             if(rotationPreview){rotationPreview.gameObject.SetActive(false);Destroy(rotationPreview.gameObject);}

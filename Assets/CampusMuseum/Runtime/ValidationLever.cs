@@ -5,9 +5,9 @@ namespace CampusMuseum
 {
     public sealed partial class MuseumApp
     {
-        const float LeverRestAngle=-10f;
-        const float LeverLoweredAngle=-75f;
-        const float LeverValidationAngle=-60f;
+        const float LeverRestAngle=-5f;
+        const float LeverLoweredAngle=-100f;
+        const float LeverValidationAngle=-80f;
         MuseumPlayer.Hand leverHand;
         Transform leverPivot;
         float leverAngle;
@@ -18,12 +18,12 @@ namespace CampusMuseum
         {
             var root=Root(stage,"Levier de validation",EditCenter+new Vector3(EditWidth/2-.10f,.10f,-EditLength/2+.12f));
             Box(root,"Socle",Vector3.zero,new Vector3(.22f,.12f,.24f),Navy);
-            leverPivot=Root(root,"Pivot",new Vector3(0,.10f,0));
+            leverPivot=Root(root,"Pivot",new Vector3(0,.18f,0));
             leverPivot.localRotation=Quaternion.Euler(LeverRestAngle,0,0);
-            Box(leverPivot,"Tige",new Vector3(0,.12f,0),new Vector3(.028f,.24f,.028f),Quiet,false);
-            var knob=Box(leverPivot,"Poignée du levier",new Vector3(0,.25f,0),new Vector3(.13f,.065f,.065f),Teal);
-            var mark=Quaternion.Euler(LeverValidationAngle,0,0)*Vector3.up*.25f;
-            Box(root,"Repère de validation",mark+Vector3.up*.10f,new Vector3(.16f,.012f,.025f),Gold,false);
+            Box(leverPivot,"Tige",new Vector3(0,.17f,0),new Vector3(.028f,.34f,.028f),Quiet,false);
+            var knob=Box(leverPivot,"Poignée du levier",new Vector3(0,.35f,0),new Vector3(.13f,.065f,.065f),Teal);
+            var mark=Quaternion.Euler(LeverValidationAngle,0,0)*Vector3.up*.35f;
+            Box(root,"Repère de validation",mark+Vector3.up*.18f,new Vector3(.16f,.012f,.025f),Gold,false);
             var action=Action(knob,BeginValidationLever,EndValidationLever);
             action.Direct=true;action.RequiresGrab=true;
             Text(root,"SAISIR ET ABAISSER",new Vector3(0,-.03f,-.13f),.025f,Color.white,TextAnchor.MiddleCenter);
@@ -77,16 +77,6 @@ namespace CampusMuseum
             }
         }
 
-        void Sparkle(Vector3 center)
-        {
-            var effect=new GameObject("Validation scintillante");effect.transform.position=center;
-            var system=effect.AddComponent<ParticleSystem>();system.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
-            var main=system.main;main.loop=false;main.duration=.35f;main.startLifetime=.85f;main.startSpeed=.23f;
-            main.startSize=.022f;main.startColor=Gold;main.simulationSpace=ParticleSystemSimulationSpace.World;
-            var emission=system.emission;emission.rateOverTime=0;emission.SetBursts(new[]{new ParticleSystem.Burst(0,55)});
-            var shape=system.shape;shape.shapeType=ParticleSystemShapeType.Box;shape.scale=new Vector3(EditWidth*.8f,.25f,EditLength*.75f);
-            effect.GetComponent<ParticleSystemRenderer>().sharedMaterial=MakeMaterial(Gold,true);
-            system.Play();Destroy(effect,1.4f);
-        }
+        void Sparkle(Vector3 center)=>EmitSparkles(center,new Vector3(EditWidth*.8f,.25f,EditLength*.75f),Gold);
     }
 }

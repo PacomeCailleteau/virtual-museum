@@ -21,6 +21,7 @@ namespace CampusMuseum
         float resizeDimension;
         StretchArrow activeResizeArrow;
         float resizeWorldScale;
+        Renderer[] resizeOriginalSurfaces;
 
         void DrawRoomHandles(Room room, Transform shell)
         {
@@ -39,7 +40,7 @@ namespace CampusMuseum
                 var direction=axis==0?shell.right:axis==1?-shell.forward:Vector3.up;
                 var color=new[]{new Color(.94f,.38f,.30f),Teal,Gold}[axis];
                 var arrow=StretchArrow.Create(stage,"Flèche "+new[]{"Largeur","Longueur","Hauteur"}[axis],shell.TransformPoint(baseLocal),direction,color);
-                float distance=(axis==0?room.width*.5f:axis==1?room.length*.5f:room.height*.52f)+.55f;
+                float distance=(axis==0?room.width*.5f:axis==1?room.length*.5f:room.height*.24f)+.55f;
                 arrow.SetLength(distance*shell.lossyScale.x);
                 var action=arrow.Bind(h=>{activeResizeArrow=arrow;BeginRoomResize(room,shell,index,h);},EndRoomResize);
                 var label=Text(stage,new[]{"Largeur","Longueur","Hauteur"}[axis],
@@ -54,13 +55,24 @@ namespace CampusMuseum
         void BeginRoomResize(Room room, Transform shell, int axis, MuseumPlayer.Hand hand)
         {
             if (resizingHand!=null || rotatingHand!=null || leverHand!=null || carriedView || heldArtwork || returningRoom!=null) return;
+            resizeOriginalSurfaces=shell.GetComponentsInChildren<Renderer>().Where(r=>r.name=="Sol"||r.name.StartsWith("Mur ")).ToArray();
+            foreach(var renderer in resizeOriginalSurfaces)renderer.enabled=false;
+            for(int axisIndex=0;axisIndex<3;axisIndex++)
+                foreach(var a in new[]{-1f,1f})foreach(var b in new[]{-1f,1f})
+                {
+                    var half=new Vector3(room.width/2,room.height*.12f,room.length/2);
+                    int next=(axisIndex+1)%3,last=(axisIndex+2)%3;
+                    var from=new Vector3(0,half.y,0);from[axisIndex]-=half[axisIndex];from[next]+=half[next]*a;from[last]+=half[last]*b;
+                    var to=from;to[axisIndex]+=half[axisIndex]*2;
+                    Line(stage,shell.TransformPoint(from),shell.TransformPoint(to),.002f,Quiet);
+                }
             resizingOriginal=room;
             resizingCandidate=(draft?.Api ?? Api).GetRoom(room.id);
             resizingAxis=axis;
             resizeDirection=axis==0?shell.right:axis==1?-shell.forward:Vector3.up;
             resizeWorldScale=shell.lossyScale.x;
             resizeOrigin=shell.position;
-            resizeScale=shell.lossyScale.x*(axis==2?.52f:.5f);
+            resizeScale=shell.lossyScale.x*(axis==2?.24f:.5f);
             resizeStart=ResizeCoordinate(hand);
             resizeDimension=float.NaN;
             resizingHand=hand;
@@ -90,7 +102,7 @@ namespace CampusMuseum
             if(resizingAxis==1) resizingCandidate.length=dimension;
             if(resizingAxis==2) resizingCandidate.height=dimension;
             resizeError=RoomResizeError(resizingCandidate);
-            if(activeResizeArrow)activeResizeArrow.SetLength((dimension*(resizingAxis==2?.52f:.5f)+.55f)*resizeWorldScale,resizeError==null);
+            if(activeResizeArrow)activeResizeArrow.SetLength((dimension*(resizingAxis==2?.24f:.5f)+.55f)*resizeWorldScale,resizeError==null);
             if(resizePreview) { resizePreview.gameObject.SetActive(false); Destroy(resizePreview.gameObject); }
             var onBench=draft!=null;
             resizePreview=Shell(stage,resizingCandidate,resizeOrigin,onBench?Quaternion.identity:resizingCandidate.rotation,
@@ -104,6 +116,7 @@ namespace CampusMuseum
         {
             if(resizingHand!=hand) return;
             resizingHand=null;
+            foreach(var renderer in resizeOriginalSurfaces)if(renderer)renderer.enabled=true;
             if(!hand.ReleaseCancelled && resizeError==null)
             {
                 var room=resizingCandidate;

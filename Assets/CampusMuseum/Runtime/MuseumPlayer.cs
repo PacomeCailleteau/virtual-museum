@@ -15,6 +15,9 @@ namespace CampusMuseum
         public Action<bool> Focus;
         public bool Direct;
         public bool RequiresGrab;
+        public bool AllowDistance;
+        public Func<bool> Available;
+        public bool IsAvailable=>Available==null || Available();
         public static WorldAction LastPressed {get;private set;}
         static readonly Dictionary<string,(float Until,Color Color)> feedback=new();
         string FeedbackKey=>(transform.parent?transform.parent.name:"root")+"/"+name;
@@ -28,7 +31,7 @@ namespace CampusMuseum
         {
             surface = renderer;
             initial = renderer.sharedMaterial;
-            focused = WorldView.MakeMaterial(Color.Lerp(initial.color,Color.white,.35f));
+            focused = WorldView.MakeMaterial(Color.Lerp(initial.color,Color.white,.35f),initial.shader==Resources.Load<Material>("CampusMuseum/Signal").shader);
             if(feedback.TryGetValue(FeedbackKey,out var saved) && saved.Until>Time.unscaledTime)
             {feedbackUntil=saved.Until;surface.sharedMaterial=WorldView.MakeMaterial(saved.Color,true);}
         }
@@ -69,6 +72,13 @@ namespace CampusMuseum
         {
             public Ray Ray;
             public WorldAction Held;
+            public float Reach=.035f;
+            public Vector3 CarryPoint=>Ray.GetPoint(Reach);
+
+            public void AdjustReach(float axis,float deltaTime)
+            {
+                if(Mathf.Abs(axis)>.2f)Reach=Mathf.Clamp(Reach+axis*.8f*deltaTime,.035f,1.8f);
+            }
             internal bool NearSelection;
             internal bool ReleaseCancelled;
             internal WorldAction Hovered;
@@ -84,6 +94,7 @@ namespace CampusMuseum
         public readonly Hand Right = new();
         public Transform Eye => head;
         public Transform Space => transform;
+        public bool IsTracked=>xr;
         public bool TeleportMode { get; set; }
         float viewElevation;
         public float ViewElevation
@@ -211,6 +222,8 @@ namespace CampusMuseum
 
                 leftDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxis, out move);
                 rightDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxis, out var turn);
+                if(Left.Held && Left.Held.AllowDistance)move=Vector2.zero;
+                if(Right.Held && Right.Held.AllowDistance)turn=Vector2.zero;
                 turnCooldown -= Time.unscaledDeltaTime;
                 if (turn.y < .5f && Mathf.Abs(turn.x) > .7f && turnCooldown <= 0 && CanMove())
                 {
@@ -235,6 +248,7 @@ namespace CampusMuseum
                 move.y = (keyboard.wKey.isPressed || keyboard.zKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0);
                 if (keyboard.tKey.wasPressedThisFrame) TeleportMode = !TeleportMode;
                 Right.Ray = playerCamera.ScreenPointToRay(mouse.position.ReadValue());
+                if(Right.Held && Right.Held.AllowDistance)Right.Reach=Mathf.Clamp(Right.Reach+mouse.scroll.ReadValue().y*.0015f,.035f,1.8f);
                 SetPointer(Left, false, false);
                 SetPointer(Right, !TeleportMode, mouse.leftButton.isPressed);
                 teleport.Aim(Right.Ray,TeleportMode && mouse.leftButton.isPressed);
@@ -267,6 +281,11 @@ namespace CampusMuseum
                 hand.controller.SetPositionAndRotation(world, orientation);
                 hand.Ray = new Ray(world + orientation * Vector3.forward * .055f, orientation * Vector3.forward);
             }
+            if(hand.Held && hand.Held.AllowDistance)
+            {
+                device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxis,out var axis);
+                hand.AdjustReach(axis.y,Time.unscaledDeltaTime);
+            }
             device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out var trigger);
             device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out var grip);
             SetPointer(hand, valid && !TeleportMode, trigger, grip);
@@ -282,6 +301,7 @@ namespace CampusMuseum
             if (valid && Physics.Raycast(hand.Ray, out var hit, 12, ~0, QueryTriggerInteraction.Ignore))
             {
                 action = hit.collider.GetComponentInParent<WorldAction>();
+                if(action && !action.IsAvailable)action=null;
                 end = hit.point;
             }
             if (valid && xr && hand.Held == null)
@@ -290,7 +310,7 @@ namespace CampusMuseum
                 foreach (var nearby in Physics.OverlapSphere(hand.Ray.origin,closest,~0,QueryTriggerInteraction.Ignore))
                 {
                     var candidate=nearby.GetComponentInParent<WorldAction>();
-                    if (!candidate || !candidate.Direct) continue;
+                    if (!candidate || !candidate.Direct || !candidate.IsAvailable) continue;
                     var point=nearby.ClosestPoint(hand.Ray.origin);
                     var contactDistance=Vector3.Distance(point,hand.Ray.origin);
                     if (contactDistance>closest) continue;

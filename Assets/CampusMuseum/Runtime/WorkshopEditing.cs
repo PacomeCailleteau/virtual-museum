@@ -29,6 +29,7 @@ namespace CampusMuseum
                 var grab=small.gameObject.AddComponent<WorldAction>();
                 grab.Direct=true;
                 grab.RequiresGrab=true;
+                grab.AllowDistance=true;
                 grab.Press=h=>
                 {
                     if(carriedView) return;
@@ -50,6 +51,7 @@ namespace CampusMuseum
                 var grab=Action(visual,h=>BeginArtwork(h,visual,art.id,null,art.localPosition),EndArtwork);
                 grab.Direct=true;
                 grab.RequiresGrab=true;
+                grab.AllowDistance=true;
             }
             Key(rail,"Annuler",-.88f,.01f,.44f,.136f,()=>{if(!draft.CanUndo){Reject("Aucune action à annuler.");return;}draft.Undo();Tell("Dernière action annulée.");});
             Key(rail,"Rétablir",-.39f,.01f,.44f,.136f,()=>{if(!draft.CanRedo){Reject("Aucune action à rétablir.");return;}draft.Redo();Tell("Dernière action rétablie.");});
@@ -92,7 +94,7 @@ namespace CampusMuseum
                     BeginArtwork(h,token,null,definition.id,initial);
                 },EndArtwork);
                 pick.Direct=true;
-                pick.RequiresGrab=true;
+                pick.RequiresGrab=true;pick.AllowDistance=true;
                 Text(cabinet,"Prendre",new Vector3(-.18f,y+.105f,-.39f),.05f,Cream,TextAnchor.MiddleCenter);
             }
         }
@@ -102,6 +104,7 @@ namespace CampusMuseum
         void BeginArtwork(MuseumPlayer.Hand hand,GameObject visual,string instanceId,string definitionId,Vector3 local)
         {
             if(draft==null || heldArtwork || carriedView || resizingHand!=null || rotatingHand!=null) return;
+            hand.Reach=.035f;
             selectedArt=instanceId;
             boardSection=BoardSection.Artworks;
             draggingId=instanceId;
@@ -109,7 +112,7 @@ namespace CampusMuseum
             heldArtwork=visual;
             artHand=hand;
             artworkHeight=local.y;
-            artworkDirectCarry=instanceId==null || hand.NearSelection;
+            artworkDirectCarry=true;
             artworkHandOffset=instanceId != null && hand.NearSelection
                 ? artEditor.TransformPoint(local)-hand.Ray.origin : Vector3.zero;
             draggingDirection=Vector3.ProjectOnPlane(hand.Ray.direction,Vector3.up);
@@ -125,7 +128,7 @@ namespace CampusMuseum
 
         void UpdateArtworkDrag(float deltaTime)
         {
-            var handPosition=artHand.Ray.origin;
+            var handPosition=artHand.CarryPoint;
             bool aboveTable=InsideBench(handPosition,EditCenter,EditWidth+.16f,EditLength+.16f) &&
                 handPosition.y>EditCenter.y-.10f && handPosition.y<EditCenter.y+.80f;
             if(artworkDirectCarry || aboveTable)
@@ -140,7 +143,7 @@ namespace CampusMuseum
             var inside = MuseumLayout.ClampInside(room, rawPosition);
             artworkCanDrop = placement.CanPlace && (inside - rawPosition).sqrMagnitude * editScale * editScale <= .035f * .035f;
             artworkDropPosition = inside;
-            if(artworkDirectCarry) heldArtwork.transform.position=handPosition+artHand.Ray.direction*.035f;
+            if(artworkDirectCarry) heldArtwork.transform.position=handPosition;
             else heldArtwork.transform.localPosition = inside + Vector3.up * Mathf.Min(.12f, room.height - inside.y);
 
             if (UnityEngine.InputSystem.Keyboard.current?.rKey.wasPressedThisFrame == true)
@@ -190,6 +193,7 @@ namespace CampusMuseum
                 });
             }
             selectedArt=id;
+            artPage=Mathf.Max(0,draft.Api.Data.artworks.FindIndex(a=>a.id==id))/PageSize;
             Tell("Œuvre placée. Les changements sont en attente de validation.");
         }
 

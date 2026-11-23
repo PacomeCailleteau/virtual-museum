@@ -14,7 +14,9 @@ namespace CampusMuseum
             var room=data.rooms.FirstOrDefault();
             if(room==null){Reject("Crée une salle avant de visiter.");return;}
             visiting=true;guided=false;player.ViewElevation=0f;
-            Tell("Choisis un parcours en pointant ses repères au sol, ou explore librement.");
+            var initial=Api.GetTour(selectedTour)??data.tours.FirstOrDefault(t=>t.artworkIds.Count>0);
+            if(initial!=null && initial.artworkIds.Count>0)StartTour(initial.id);
+            if(!guided)Tell("Exploration libre. Aucun parcours rempli n’est disponible.");
             MoveToRoom(room);
         }
 
@@ -41,7 +43,8 @@ namespace CampusMuseum
             if(!visiting)
             {
                 bool inside=world.x>-4.20f && world.x<6.3f && world.z>-4.25f && world.z<3.15f;
-                return inside && !InsideBench(world,MapCenter,MapWidth+.22f,MapLength+.15f) &&
+                return inside && (!workshop.resetBuzzer || !InsideBench(world,workshop.resetBuzzer.position,.65f,.65f)) &&
+                    (!workshop.emptyBuzzer || !InsideBench(world,workshop.emptyBuzzer.position,.65f,.65f)) && !InsideBench(world,MapCenter,MapWidth+.22f,MapLength+.15f) &&
                     !InsideBench(world,EditCenter,EditWidth+.22f,EditLength+.18f) &&
                     !InsideBench(world,workshop.catalogue.position+Vector3.forward*.19f,1.30f,.8f);
             }

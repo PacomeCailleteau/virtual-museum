@@ -12,7 +12,6 @@ namespace CampusMuseum
         enum NoticeLevel { Info, Success, Warning }
         readonly Queue<(string Time,string Message,NoticeLevel Level)> notices=new();
         NoticeLevel noticeLevel;
-        bool confirmEmpty;
         readonly Dictionary<string,GameObject> artworkViews=new();
 
         void HighlightArtworkById(string id,bool hovered)
@@ -38,7 +37,8 @@ namespace CampusMuseum
         void DrawTableFeedback(Transform controls)
         {
             if(string.IsNullOrEmpty(status))return;
-            Text(controls,Wrap(status,65,2),new Vector3(-1.87f,-.32f,-.08f),.053f,
+            bool editor=controls.name==workshop.editingControls.name;
+            Text(controls,Wrap(status,editor?48:80,2),new Vector3(editor?-1.11f:-1.87f,-.25f,-.031f),editor?.028f:.035f,
                 noticeLevel==NoticeLevel.Warning?Gold:Color.white);
         }
 
@@ -59,17 +59,7 @@ namespace CampusMuseum
             }
         }
 
-        void ResetEmptyMuseum()
-        {
-            if(!WorkshopReady())return;
-            if(!confirmEmpty){confirmEmpty=true;Tell("Confirme Nouvelle maquette vide. La sauvegarde sur l’appareil est conservée.");return;}
-            Api.Replace(new Museum(),new VisitorSession());
-            visitHistory.Clear();
-            selectedRoom=selectedArt=selectedTour=linkFirstRoom=null;
-            linking=drawing=confirmDelete=confirmEmpty=false;
-            corner=null;activeField=TextField.None;
-            Tell("Maquette vide. Trace la première salle sur la table.");
-        }
+        void ResetEmptyMuseum()=>ResetWorkshop(true);
 
         void HighlightArtwork(GameObject visual,bool active)
         {

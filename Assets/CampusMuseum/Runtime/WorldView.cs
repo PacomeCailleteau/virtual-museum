@@ -124,12 +124,11 @@ namespace CampusMuseum
             root.localRotation = rotation;
             root.localScale = Vector3.one * scale;
             float height = miniature ? room.height * .24f : room.height;
-            float back = miniature ? room.height * .52f : room.height;
             var tint = miniature ? Color.Lerp(Quiet,Navy,.25f) : Navy;
             Box(root, "Sol", new Vector3(0,-.045f,0), new Vector3(room.width,.09f,room.length), floor);
             Box(root, "Mur gauche", new Vector3(-room.width/2,height/2,0), new Vector3(.11f,height,room.length), tint);
             Box(root, "Mur droit", new Vector3(room.width/2,height/2,0), new Vector3(.11f,height,room.length), tint);
-            Box(root, "Mur fond", new Vector3(0,back/2,room.length/2), new Vector3(room.width,back,.11f), tint);
+            Box(root, "Mur fond", new Vector3(0,height/2,room.length/2), new Vector3(room.width,height,.11f), tint);
             Box(root, "Mur avant", new Vector3(0,height/2,-room.length/2), new Vector3(room.width,height,.11f), tint);
             return root;
         }
@@ -173,6 +172,18 @@ namespace CampusMuseum
             line.startWidth = line.endWidth = width;
             line.SetPosition(0, from);
             line.SetPosition(1, to);
+        }
+
+        public static void EmitSparkles(Vector3 center,Vector3 size,Color color)
+        {
+            var effect=new GameObject("Étincelles de confirmation");effect.transform.position=center;
+            var system=effect.AddComponent<ParticleSystem>();system.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main=system.main;main.loop=false;main.duration=.35f;main.startLifetime=.85f;main.startSpeed=.23f;
+            main.startSize=.022f;main.startColor=color;main.simulationSpace=ParticleSystemSimulationSpace.World;
+            var emission=system.emission;emission.rateOverTime=0;emission.SetBursts(new[]{new ParticleSystem.Burst(0,55)});
+            var shape=system.shape;shape.shapeType=ParticleSystemShapeType.Box;shape.scale=size;
+            effect.GetComponent<ParticleSystemRenderer>().sharedMaterial=MakeMaterial(color,true);
+            system.Play();UnityEngine.Object.Destroy(effect,1.4f);
         }
 
         public static string Wrap(string value, int width, int limit = 3)
