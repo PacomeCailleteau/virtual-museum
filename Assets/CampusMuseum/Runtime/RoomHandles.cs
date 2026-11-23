@@ -19,6 +19,8 @@ namespace CampusMuseum
         TextMesh resizeCaption;
         string resizeError;
         float resizeDimension;
+        StretchArrow activeResizeArrow;
+        float resizeWorldScale;
 
         void DrawRoomHandles(Room room, Transform shell)
         {
@@ -33,29 +35,30 @@ namespace CampusMuseum
             for (int axis=0;axis<3;axis++)
             {
                 var index=axis;
-                var local = axis==0 ? new Vector3(room.width/2+.55f,.45f,0)
-                    : axis==1 ? new Vector3(0,.45f,room.length/2+.55f)
-                    : new Vector3(0,room.height*.52f+.55f,0);
-                var size = .065f / shell.lossyScale.x;
-                var color = new[]{new Color(.94f,.38f,.30f),Teal,Gold}[axis];
-                var handle=Box(shell,"Poignée "+new[]{"Largeur","Longueur","Hauteur"}[axis],local,Vector3.one*size,color);
-                var action=Action(handle,h=>BeginRoomResize(room,shell,index,h),EndRoomResize);
-                action.Direct=true;
-                action.RequiresGrab=true;
-                var label=Text(shell,new[]{"Largeur","Longueur","Hauteur"}[axis],local+Vector3.up*size,
-                    .045f/shell.lossyScale.x,Color.white,TextAnchor.MiddleCenter);
+                var baseLocal=axis==2?new Vector3(0,.15f,0):new Vector3(0,.45f,0);
+                var direction=axis==0?shell.right:axis==1?-shell.forward:Vector3.up;
+                var color=new[]{new Color(.94f,.38f,.30f),Teal,Gold}[axis];
+                var arrow=StretchArrow.Create(stage,"Flèche "+new[]{"Largeur","Longueur","Hauteur"}[axis],shell.TransformPoint(baseLocal),direction,color);
+                float distance=(axis==0?room.width*.5f:axis==1?room.length*.5f:room.height*.52f)+.55f;
+                arrow.SetLength(distance*shell.lossyScale.x);
+                var action=arrow.Bind(h=>{activeResizeArrow=arrow;BeginRoomResize(room,shell,index,h);},EndRoomResize);
+                var label=Text(stage,new[]{"Largeur","Longueur","Hauteur"}[axis],
+                    arrow.transform.position+direction*(distance*shell.lossyScale.x)+Vector3.up*.05f,
+                    .045f,Color.white,TextAnchor.MiddleCenter);
                 label.gameObject.SetActive(false);
                 action.Focus=active=> { if(label) label.gameObject.SetActive(active); };
             }
+            DrawRoomRotation(room,shell);
         }
 
         void BeginRoomResize(Room room, Transform shell, int axis, MuseumPlayer.Hand hand)
         {
-            if (resizingHand!=null || carriedView || heldArtwork || returningRoom!=null) return;
+            if (resizingHand!=null || rotatingHand!=null || leverHand!=null || carriedView || heldArtwork || returningRoom!=null) return;
             resizingOriginal=room;
             resizingCandidate=(draft?.Api ?? Api).GetRoom(room.id);
             resizingAxis=axis;
-            resizeDirection=axis==0?shell.right:axis==1?shell.forward:Vector3.up;
+            resizeDirection=axis==0?shell.right:axis==1?-shell.forward:Vector3.up;
+            resizeWorldScale=shell.lossyScale.x;
             resizeOrigin=shell.position;
             resizeScale=shell.lossyScale.x*(axis==2?.52f:.5f);
             resizeStart=ResizeCoordinate(hand);
@@ -87,6 +90,7 @@ namespace CampusMuseum
             if(resizingAxis==1) resizingCandidate.length=dimension;
             if(resizingAxis==2) resizingCandidate.height=dimension;
             resizeError=RoomResizeError(resizingCandidate);
+            if(activeResizeArrow)activeResizeArrow.SetLength((dimension*(resizingAxis==2?.52f:.5f)+.55f)*resizeWorldScale,resizeError==null);
             if(resizePreview) { resizePreview.gameObject.SetActive(false); Destroy(resizePreview.gameObject); }
             var onBench=draft!=null;
             resizePreview=Shell(stage,resizingCandidate,resizeOrigin,onBench?Quaternion.identity:resizingCandidate.rotation,
@@ -109,7 +113,7 @@ namespace CampusMuseum
                     return;
                 }
                 if(draft!=null) draft.Apply(api=>api.ResizeRoom(room.id,room.width,room.length,room.height));
-                else Api.ResizeRoom(room.id,room.width,room.length,room.height);
+                else {Api.ResizeRoom(room.id,room.width,room.length,room.height);ConnectTouchingRooms(room.id);}
                 Tell("Dimensions appliquées sur la grille de 0,5 m.");
             }
             else Tell(resizeError??"Redimensionnement annulé.");

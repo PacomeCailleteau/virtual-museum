@@ -12,6 +12,7 @@ namespace CampusMuseum
         bool artworkCanDrop;
         Vector3 artworkHandOffset;
         float artworkHeight;
+        bool artworkDirectCarry;
 
         void DrawEditor()
         {
@@ -48,19 +49,15 @@ namespace CampusMuseum
                 grab.Direct=true;
                 grab.RequiresGrab=true;
             }
-            Key(rail,"Annuler",-.88f,.01f,.44f,.136f,()=>{if(draft.CanUndo) draft.Undo();Tell("Dernière action annulée.");});
-            Key(rail,"Rétablir",-.39f,.01f,.44f,.136f,()=>{if(draft.CanRedo) draft.Redo();Tell("Dernière action rétablie.");});
+            Key(rail,"Annuler",-.88f,.01f,.44f,.136f,()=>{if(!draft.CanUndo){Reject("Aucune action à annuler.");return;}draft.Undo();Tell("Dernière action annulée.");});
+            Key(rail,"Rétablir",-.39f,.01f,.44f,.136f,()=>{if(!draft.CanRedo){Reject("Aucune action à rétablir.");return;}draft.Redo();Tell("Dernière action rétablie.");});
             Key(rail,"Abandonner",.15f,.01f,.56f,.136f,()=>CloseEdit(false),Red);
             Key(rail,"Tourner",.72f,.01f,.46f,.136f,RotateExhibit);
             Key(rail,"Descendre l’œuvre",-.63f,-.15f,.90f,.115f,()=>LiftExhibit(-.15f));
             Key(rail,"Monter l’œuvre",.33f,-.15f,.90f,.115f,()=>LiftExhibit(.15f));
 
-            var lever=Root(stage,"Interrupteur de validation",EditCenter + new Vector3(EditWidth/2-.10f,.14f,-EditLength/2+.12f));
-            Box(lever,"Socle",Vector3.zero,new Vector3(.29f,.22f,.30f),Navy);
-            var handle=Box(lever,"Levier",new Vector3(0,.18f,0),new Vector3(.08f,.32f,.08f),Teal);
-            handle.transform.localRotation=Quaternion.Euler(32,0,0);
-            Action(handle,_=>CloseEdit(true)).Direct=true;
-            Text(lever,"VALIDER",new Vector3(0,.065f,-.154f),.044f,Cream,TextAnchor.MiddleCenter);
+            DrawValidationLever();
+            DrawTableFeedback(rail);
 
             DrawDrawers();
         }
@@ -102,7 +99,7 @@ namespace CampusMuseum
 
         void BeginArtwork(MuseumPlayer.Hand hand,GameObject visual,string instanceId,string definitionId,Vector3 local)
         {
-            if(draft==null || heldArtwork || carriedView || resizingHand!=null) return;
+            if(draft==null || heldArtwork || carriedView || resizingHand!=null || rotatingHand!=null) return;
             selectedArt=instanceId;
             boardSection=BoardSection.Artworks;
             draggingId=instanceId;
@@ -110,6 +107,7 @@ namespace CampusMuseum
             heldArtwork=visual;
             artHand=hand;
             artworkHeight=local.y;
+            artworkDirectCarry=instanceId==null || hand.NearSelection;
             artworkHandOffset=instanceId != null && hand.NearSelection
                 ? artEditor.TransformPoint(local)-hand.Ray.origin : Vector3.zero;
             draggingDirection=Vector3.ProjectOnPlane(hand.Ray.direction,Vector3.up);
@@ -117,7 +115,7 @@ namespace CampusMuseum
             draggingTurn=0f;
             foreach(var c in visual.GetComponentsInChildren<Collider>()) c.enabled=false;
             placement.Begin(hand.Ray, artEditor.TransformPoint(local), instanceId != null,
-                hand.NearSelection);
+                artworkDirectCarry);
             placementMarker = Box(stage, "Repère de dépôt", placement.Position,
                 new Vector3(.13f,.008f,.13f), Teal, false).GetComponent<Renderer>();
             UpdateArtworkDrag(0);
@@ -128,7 +126,7 @@ namespace CampusMuseum
             var handPosition=artHand.Ray.origin;
             bool aboveTable=InsideBench(handPosition,EditCenter,EditWidth+.16f,EditLength+.16f) &&
                 handPosition.y>EditCenter.y-.10f && handPosition.y<EditCenter.y+.80f;
-            if(artHand.NearSelection || aboveTable)
+            if(artworkDirectCarry || aboveTable)
             {
                 var target=handPosition+artworkHandOffset;
                 target.y=artEditor.TransformPoint(new Vector3(0,artworkHeight,0)).y;
@@ -140,7 +138,8 @@ namespace CampusMuseum
             var inside = MuseumLayout.ClampInside(room, rawPosition);
             artworkCanDrop = placement.CanPlace && (inside - rawPosition).sqrMagnitude * editScale * editScale <= .035f * .035f;
             artworkDropPosition = inside;
-            heldArtwork.transform.localPosition = inside + Vector3.up * Mathf.Min(.12f, room.height - inside.y);
+            if(artworkDirectCarry) heldArtwork.transform.position=handPosition+artHand.Ray.direction*.035f;
+            else heldArtwork.transform.localPosition = inside + Vector3.up * Mathf.Min(.12f, room.height - inside.y);
 
             if (UnityEngine.InputSystem.Keyboard.current?.rKey.wasPressedThisFrame == true)
                 draggingTurn += 15f;
@@ -207,15 +206,20 @@ namespace CampusMuseum
             if(art==null || art.roomId!=draft.RoomId) {Tell("Choisis une œuvre dans la salle agrandie.");return;}
             var room=draft.Api.GetRoom(draft.RoomId);
             var position=MuseumLayout.ClampInside(room,art.localPosition+amount*Vector3.up);
-            if(Mathf.Approximately(position.y,art.localPosition.y)) return;
+            if(Mathf.Approximately(position.y,art.localPosition.y)) {Reject("Limite de hauteur atteinte dans cette salle.");return;}
             draft.Apply(api=>api.SetArtworkTransform(art.id,position,art.localRotation,art.localScale));
             Tell("Hauteur de l’œuvre modifiée.");
         }
 
         void CloseEdit(bool apply)
         {
-            if(draft==null || heldArtwork || carriedView || resizingHand!=null) return;
-            if(apply) draft.Commit(Api);
+            if(draft==null || heldArtwork || carriedView || resizingHand!=null || rotatingHand!=null) return;
+            if(apply)
+            {
+                draft.Commit(Api);
+                ConnectTouchingRooms(draft.RoomId);
+                Sparkle(EditCenter+Vector3.up*.15f);
+            }
             returningRoom=draft.RoomId;
             draft=null;
             selectedArt=null;

@@ -15,6 +15,11 @@ namespace CampusMuseum
         public Action<bool> Focus;
         public bool Direct;
         public bool RequiresGrab;
+        public static WorldAction LastPressed {get;private set;}
+        static readonly Dictionary<string,(float Until,Color Color)> feedback=new();
+        string FeedbackKey=>(transform.parent?transform.parent.name:"root")+"/"+name;
+        float feedbackUntil;
+        bool hovered;
         Material initial;
         Material focused;
         Renderer surface;
@@ -24,12 +29,37 @@ namespace CampusMuseum
             surface = renderer;
             initial = renderer.sharedMaterial;
             focused = WorldView.MakeMaterial(Color.Lerp(initial.color,Color.white,.35f));
+            if(feedback.TryGetValue(FeedbackKey,out var saved) && saved.Until>Time.unscaledTime)
+            {feedbackUntil=saved.Until;surface.sharedMaterial=WorldView.MakeMaterial(saved.Color,true);}
         }
 
         public void Hover(bool active)
         {
-            if (surface) surface.sharedMaterial = active ? focused : initial;
+            hovered=active;
+            if (surface && Time.unscaledTime>=feedbackUntil) surface.sharedMaterial = active ? focused : initial;
             Focus?.Invoke(active);
+        }
+
+        public void Feedback(Color color)
+        {
+            if(!surface)return;
+            feedbackUntil=Time.unscaledTime+.65f;
+            feedback[FeedbackKey]=(feedbackUntil,color);
+            surface.sharedMaterial=WorldView.MakeMaterial(color,true);
+        }
+
+        void Update()
+        {
+            if(feedbackUntil<=0 || Time.unscaledTime<feedbackUntil)return;
+            feedbackUntil=0;
+            if(surface)surface.sharedMaterial=hovered?focused:initial;
+        }
+
+        public void Invoke(MuseumPlayer.Hand hand)
+        {
+            LastPressed=this;
+            Feedback(WorldView.Teal);
+            Press?.Invoke(hand);
         }
     }
 
@@ -291,7 +321,7 @@ namespace CampusMuseum
                     hand.Held = action;
                     hand.NearSelection = near;
                     hand.ReleaseCancelled = false;
-                    action.Press?.Invoke(hand);
+                    action.Invoke(hand);
                 }
             }
             if ((!valid || !pressed) && hand.Held)

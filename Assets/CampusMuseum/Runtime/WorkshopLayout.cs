@@ -13,6 +13,8 @@ namespace CampusMuseum
         public Transform editingControls;
         public Transform board;
         public Transform catalogue;
+        public Transform terminal;
+        public bool startWithEmptyMuseum = true;
         public GameObject exit;
         public Transform arrival;
         [Range(0f,.35f)] public float viewElevation = .15f;

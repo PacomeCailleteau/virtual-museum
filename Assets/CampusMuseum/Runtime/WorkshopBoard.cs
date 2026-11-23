@@ -45,13 +45,16 @@ namespace CampusMuseum
                 var section=(BoardSection)i;
                 BoardKey(board,sections[i],-1.36f+i*1.36f,.61f,1.26f,()=>{boardSection=section;QueueDraw();},boardSection==section?Teal:null);
             }
-            Text(board,Wrap(status,65,2),new Vector3(-1.96f,.37f,-.08f),.078f,Teal);
+            Text(board,boardSection==BoardSection.Tours?"Compose et ordonne les étapes de visite."
+                : boardSection==BoardSection.Artworks?"Pointe un nom pour repérer l’œuvre sur la table."
+                : "Enregistre ou retrouve ton musée.",new Vector3(-1.96f,.37f,-.08f),.078f,Teal);
             if(boardSection==BoardSection.Storage)
             {
                 Text(board,"Retrouver le musée et la progression de la visite",new Vector3(-1.85f,.09f,-.08f),.09f,Cream);
                 BoardKey(board,"Sauvegarder",-.95f,-.20f,1.65f,SaveMuseum,Teal);
                 BoardKey(board,"Charger",.95f,-.20f,1.65f,LoadMuseum);
                 Text(board,"Valide et replace la salle avant de sauvegarder.",new Vector3(-1.85f,-.49f,-.08f),.085f,Cream);
+                BoardKey(board,confirmEmpty?"Confirmer la remise à zéro":"Nouvelle maquette vide",0,-.75f,3.6f,ResetEmptyMuseum,confirmEmpty?Red:null);
                 return;
             }
             if(boardSection==BoardSection.Artworks) { DrawArtworkBoard(board); return; }
@@ -155,22 +158,22 @@ namespace CampusMuseum
                 drawing=!drawing; linking=false; linkFirstRoom=null; corner=null;
                 Tell(drawing?"Pointe le premier coin sur la table.":"Tracé annulé.");
             },Teal);
-            Key(controls,"Tourner −15°",-.81f,.02f,.65f,.115f,()=>TurnRoom(-15));
-            Key(controls,"Tourner +15°",-.11f,.02f,.65f,.115f,()=>TurnRoom(15));
+            Text(controls,"Rotation : saisir l’arc et tourner par quarts de tour",new Vector3(-.96f,.02f,-.08f),.049f,Cream);
             Key(controls,linking?"Annuler le lien":"Relier / délier",.62f,.02f,.71f,.115f,()=>{
                 if(!WorkshopReady()) return;
                 linking=!linking; linkFirstRoom=null; drawing=false; corner=null;
                 Tell(linking?"Pointe la première salle, puis la deuxième avec la gâchette index.":"Création de lien annulée.");
             });
             Key(controls,confirmDelete?"Confirmer":"Supprimer",1.45f,.02f,.82f,.115f,DeleteRoom,Red);
-            Text(controls,"Saisir une poignée colorée pour régler les dimensions",new Vector3(-1.87f,-.19f,-.08f),.064f,Cream);
+            Text(controls,"Saisir une flèche pour régler les dimensions",new Vector3(-1.87f,-.19f,-.08f),.064f,Cream);
+            DrawTableFeedback(controls);
         }
 
         void CreateTour()
         {
             if(!WorkshopReady()) return;
             selectedTour=Api.CreateTour("Parcours "+(data.tours.Count+1)).id;
-            tourPage=data.tours.Count/PageSize;
+            tourPage=(Api.Data.tours.Count-1)/PageSize;
             stopPage=0;
             Tell("Parcours créé.");
         }
@@ -209,7 +212,7 @@ namespace CampusMuseum
 
         bool WorkshopReady()
         {
-            if(draft == null && returningRoom == null && !carriedView && !heldArtwork && resizingHand==null) return true;
+            if(draft == null && returningRoom == null && !carriedView && !heldArtwork && resizingHand==null && rotatingHand==null && leverHand==null) return true;
             Tell("Valide ou annule l’édition, puis replace la salle sur la maquette.");
             return false;
         }
@@ -217,13 +220,15 @@ namespace CampusMuseum
         void SaveMuseum()
         {
             if(!WorkshopReady()) return;
-            Tell(backend.Save(out var error) ? "Musée et visite sauvegardés." : "Échec de la sauvegarde : "+error);
+            if(!backend.Save(out var error)) {Reject("Échec de la sauvegarde : "+error);return;}
+            if(SaveVisitHistory())Tell("Musée et visites sauvegardés.");
         }
 
         void LoadMuseum()
         {
             if(!WorkshopReady()) return;
             if(!backend.Load(out var error)) { Tell("Chargement impossible : "+error); return; }
+            LoadVisitHistory();
             selectedRoom=selectedArt=null;
             selectedTour=Api.Session.tourId;
             Tell("Musée et progression restaurés.");
@@ -293,7 +298,7 @@ namespace CampusMuseum
         void RemoveArtwork()
         {
             var art=(draft?.Api ?? Api).GetArtwork(selectedArt);
-            if(art==null || (draft!=null && art.roomId!=draft.RoomId)) return;
+            if(art==null || (draft!=null && art.roomId!=draft.RoomId)) {Reject("Choisis une œuvre dans la salle en cours d’édition.");return;}
             EditArtwork(a=>a.RemoveArtwork(art.id));
             selectedArt=null;
             Tell("Œuvre retirée du musée et des parcours.");
