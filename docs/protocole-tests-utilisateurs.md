@@ -18,8 +18,8 @@ Prévoir environ 45 minutes par personne : accueil et familiarisation 5 minutes,
 
 - Noter la version de l’APK, le commit, la date, le code du participant et les initiales de l’animateur.
 - Vérifier la batterie, la netteté, l’écartement des lentilles, les dragonnes et la limite de jeu. Dégager la zone.
-- Lancer l’application. Vérifier que la table maquette est vide et que le journal mural est lisible.
-- Si nécessaire, utiliser Sauvegarde > Nouvelle maquette vide, puis confirmer. Cette action vide aussi les parcours et leur progression en mémoire. La sauvegarde existante sur l’appareil reste conservée.
+- Lancer l’application. Le musée d’exemple apparaît. Vérifier que le journal mural, à côté du tableau blanc, est lisible.
+- Donner un coup descendant sur le buzzer orange « TEST UTILISATEUR ». Vérifier les étincelles de confirmation puis la maquette et les parcours vides. Cette action vide aussi leur progression en mémoire. La sauvegarde existante sur l’appareil reste conservée. Le buzzer vert restaure l’exemple si nous en avons besoin.
 - Faire la familiarisation sur une configuration temporaire si nécessaire, puis remettre la maquette à zéro avant la tâche 1. Ne pas montrer la solution des tâches évaluées.
 - Préparer une feuille d’observation et un questionnaire vierges. Ne pas réutiliser les réponses d’une autre personne.
 
