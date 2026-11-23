@@ -126,20 +126,7 @@ namespace CampusMuseum
                 Tell(linking?"Pointe une deuxième salle.":"Création de lien annulée.");
             });
             Key(controls,confirmDelete?"Confirmer":"Supprimer",1.45f,.02f,.82f,.115f,DeleteRoom,Red);
-            DimensionKeys(controls,-.19f);
-        }
-
-        void DimensionKeys(Transform parent,float y)
-        {
-            for(int i=0;i<3;i++)
-            {
-                int axis=i;
-                string label=new[]{"Largeur","Longueur","Hauteur"}[i];
-                var x=-1.60f+i*1.08f;
-                Text(parent,label,new Vector3(x-.20f,y,-.08f),.061f,Cream,TextAnchor.MiddleCenter);
-                Key(parent,"−",x+.22f,y,.22f,.11f,()=>Resize(axis,-.5f));
-                Key(parent,"+",x+.48f,y,.22f,.11f,()=>Resize(axis,.5f));
-            }
+            Text(controls,"Saisir une poignée colorée pour régler les dimensions",new Vector3(-1.87f,-.19f,-.08f),.064f,Cream);
         }
 
         void CreateTour()
@@ -184,7 +171,7 @@ namespace CampusMuseum
 
         bool WorkshopReady()
         {
-            if(draft == null && returningRoom == null && !carriedView && !heldArtwork) return true;
+            if(draft == null && returningRoom == null && !carriedView && !heldArtwork && resizingHand==null) return true;
             Tell("Valide ou annule l’édition, puis rapporte la salle sur la maquette.");
             return false;
         }

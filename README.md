@@ -28,15 +28,19 @@ Pour modifier le décor du groupe, ouvrir `Assets/CampusMuseum/Resources/CampusM
 
 | Action | Casque | Éditeur sans casque |
 | --- | --- | --- |
-| Pointer, prendre et poser | Viser et maintenir la gâchette d’index, puis la relâcher pour poser | Viser à la souris et maintenir le clic gauche, puis le relâcher |
+| Prendre et poser | Viser et maintenir le bouton Grab sous le majeur, puis le relâcher pour poser | Viser à la souris et maintenir le clic gauche, puis le relâcher |
+| Actionner un bouton ou désigner une œuvre | Viser et presser la gâchette sous l’index | Clic gauche |
+| Régler les dimensions d’une salle | Prendre une poignée colorée avec Grab et la tirer sur son axe | Tirer une poignée avec le clic gauche |
 | Regarder et tourner | Tourner la tête ou utiliser le joystick droit | Maintenir le clic droit et bouger la souris |
 | Se déplacer | Joystick gauche | ZQSD ou WASD |
-| Basculer vers la téléportation | X à gauche, viser le sol puis presser la gâchette | T, puis clic gauche au sol |
+| Se téléporter | Maintenir le joystick droit vers l’avant, viser le sol et relâcher le joystick | T pour activer le mode, maintenir le clic gauche et relâcher sur une destination valide |
 | Tourner une œuvre | Orienter le rayon pendant la prise, ou utiliser le bouton Tourner | R pendant la prise, ou utiliser le bouton Tourner |
+
+Nous avons réduit les tables pour faciliter l’accès aux miniatures. Pour se téléporter, nous utilisons le fournisseur de téléportation du XR Interaction Toolkit. Une trajectoire courbe mène au repère d’arrivée. Le repère turquoise indique une destination accessible et sa barre dorée montre la direction du regard à l’arrivée. Une trajectoire rouge indique que la destination est refusée.
 
 ## Essayer les deux modes
 
-1. Sélectionner une salle sur la maquette. Les commandes de la table permettent de la tourner, de la relier à une autre et de régler sa largeur, sa longueur et sa hauteur. Pour en créer une, appuyer sur « Tracer une salle » puis pointer deux coins libres sur la table.
+1. Sélectionner une salle sur la maquette. Les commandes de la table permettent de la tourner et de la relier à une autre. Pour régler sa largeur, sa longueur ou sa hauteur, prendre une des trois poignées colorées et la tirer. Les dimensions suivent une grille de 0,5 m. Le repère devient rouge si le changement dépasse la table, recouvre une salle ou ferait sortir une œuvre. Pour en créer une, appuyer sur « Tracer une salle » puis pointer deux coins libres sur la table.
 2. Déposer une salle sur la table d’édition pour l’agrandir. Ouvrir un tiroir et placer une œuvre dans la salle. Pour modifier son titre ou sa description, pointer l’œuvre puis utiliser le tableau. Actionner le levier pour valider. Reprendre ensuite la salle à la taille de la maquette et la déposer sur le repère turquoise.
 3. Créer un parcours sur le tableau. Sélectionner les œuvres à visiter, puis ordonner les étapes. Le tracé apparaît sur la maquette. Le bouton « Sauver » enregistre la configuration du musée et la progression de la visite sur l’appareil.
 4. Passer par la porte « Visiter le musée ». Le panneau de la galerie permet de choisir une visite libre, de démarrer un parcours ou de le reprendre. Suivre les repères au sol et les portes jusqu’à l’œuvre attendue, puis valider l’étape à proximité.

@@ -1,5 +1,10 @@
 {
   "name": "CampusMuseum",
   "rootNamespace": "CampusMuseum",
-  "references": ["VirtualMuseum", "Unity.InputSystem", "Unity.XR.CoreUtils"]
+  "references": [
+    "VirtualMuseum",
+    "Unity.InputSystem",
+    "Unity.XR.CoreUtils",
+    "Unity.XR.Interaction.Toolkit"
+  ]
 }

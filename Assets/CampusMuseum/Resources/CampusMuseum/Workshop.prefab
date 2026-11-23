@@ -200,7 +200,7 @@ Transform:
   m_GameObject: {fileID: 695099565576307947}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.8, y: 0, z: -2.15}
+  m_LocalPosition: {x: -0.8, y: 0, z: -1.62}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1618,8 +1618,8 @@ Transform:
   m_GameObject: {fileID: 3382966656644398716}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.15, y: 0.94, z: 0.1}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 1.95, y: 0.94, z: 0.1}
+  m_LocalScale: {x: 0.65, y: 1, z: 0.63}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 700949681861117928}
@@ -1910,7 +1910,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.32556814, y: 0, z: 0, w: 0.94551855}
   m_LocalPosition: {x: -0.05, y: -0.25, z: -1.56}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1, y: 0.82, z: 1.64}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 497809908593513510}
@@ -2279,7 +2279,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.32556814, y: 0, z: 0, w: 0.94551855}
   m_LocalPosition: {x: 0, y: -0.31, z: -1.08}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.02, y: 0.82, z: 1.3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6143921813207448441}
@@ -2536,8 +2536,8 @@ Transform:
   m_GameObject: {fileID: 4996532683042171221}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4.85, y: 1.12, z: 0.65}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 3.4, y: 1.12, z: 0.65}
+  m_LocalScale: {x: 0.85, y: 0.85, z: 0.85}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4155044639958816649}
@@ -3242,7 +3242,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.85, y: 0.94, z: 0.05}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.62, y: 1, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 939366011189692175}

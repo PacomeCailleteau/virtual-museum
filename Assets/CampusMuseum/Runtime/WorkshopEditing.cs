@@ -25,6 +25,7 @@ namespace CampusMuseum
                 foreach(var art in Api.GetArtworksInRoom(room.id)) Artwork(small,Api.Catalog,art);
                 var grab=small.gameObject.AddComponent<WorldAction>();
                 grab.Direct=true;
+                grab.RequiresGrab=true;
                 grab.Press=h=>
                 {
                     if(carriedView) return;
@@ -35,13 +36,15 @@ namespace CampusMuseum
                 return;
             }
 
-            editScale = Mathf.Min(Mathf.Max(.1f,EditWidth-.63f)/room.width,Mathf.Max(.1f,EditLength-.54f)/room.length,.43f);
+            editScale = Mathf.Min(Mathf.Max(.1f,EditWidth-.35f)/room.width,Mathf.Max(.1f,EditLength-.32f)/room.length,.43f);
             artEditor=Shell(stage,room,EditCenter,Quaternion.identity,editScale,true,new Color(.69f,.78f,.72f));
+            DrawRoomHandles(room,artEditor);
             foreach(var art in draft.Api.GetArtworksInRoom(room.id))
             {
                 var visual=Artwork(artEditor,Api.Catalog,art);
                 var grab=Action(visual,h=>BeginArtwork(h,visual,art.id,null,art.localPosition),EndArtwork);
                 grab.Direct=true;
+                grab.RequiresGrab=true;
             }
             Key(rail,"Annuler",-.88f,.01f,.44f,.136f,()=>{if(draft.CanUndo) draft.Undo();Tell("Dernière action annulée.");});
             Key(rail,"Rétablir",-.39f,.01f,.44f,.136f,()=>{if(draft.CanRedo) draft.Redo();Tell("Dernière action rétablie.");});
@@ -50,7 +53,7 @@ namespace CampusMuseum
             Key(rail,"Descendre l’œuvre",-.63f,-.15f,.90f,.115f,()=>LiftExhibit(-.15f));
             Key(rail,"Monter l’œuvre",.33f,-.15f,.90f,.115f,()=>LiftExhibit(.15f));
 
-            var lever=Root(stage,"Interrupteur de validation",EditCenter + new Vector3(1.09f,.14f,-.69f));
+            var lever=Root(stage,"Interrupteur de validation",EditCenter + new Vector3(EditWidth/2-.10f,.14f,-EditLength/2+.12f));
             Box(lever,"Socle",Vector3.zero,new Vector3(.29f,.22f,.30f),Navy);
             var handle=Box(lever,"Levier",new Vector3(0,.18f,0),new Vector3(.08f,.32f,.08f),Teal);
             handle.transform.localRotation=Quaternion.Euler(32,0,0);
@@ -88,6 +91,7 @@ namespace CampusMuseum
                     BeginArtwork(h,token,null,definition.id,initial);
                 },EndArtwork);
                 pick.Direct=true;
+                pick.RequiresGrab=true;
                 Text(cabinet,"Prendre",new Vector3(-.18f,y+.105f,-.39f),.05f,Cream,TextAnchor.MiddleCenter);
             }
         }
@@ -96,7 +100,7 @@ namespace CampusMuseum
 
         void BeginArtwork(MuseumPlayer.Hand hand,GameObject visual,string instanceId,string definitionId,Vector3 local)
         {
-            if(draft==null || heldArtwork || carriedView) return;
+            if(draft==null || heldArtwork || carriedView || resizingHand!=null) return;
             selectedArt=instanceId;
             draggingId=instanceId;
             draggingDefinition=definitionId;
@@ -195,7 +199,7 @@ namespace CampusMuseum
 
         void CloseEdit(bool apply)
         {
-            if(draft==null || heldArtwork || carriedView) return;
+            if(draft==null || heldArtwork || carriedView || resizingHand!=null) return;
             if(apply) draft.Commit(Api);
             returningRoom=draft.RoomId;
             draft=null;

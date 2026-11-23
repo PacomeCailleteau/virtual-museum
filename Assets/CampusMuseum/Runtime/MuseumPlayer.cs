@@ -12,7 +12,9 @@ namespace CampusMuseum
     {
         public Action<MuseumPlayer.Hand> Press;
         public Action<MuseumPlayer.Hand> Release;
+        public Action<bool> Focus;
         public bool Direct;
+        public bool RequiresGrab;
         Material initial;
         Material focused;
         Renderer surface;
@@ -27,6 +29,7 @@ namespace CampusMuseum
         public void Hover(bool active)
         {
             if (surface) surface.sharedMaterial = active ? focused : initial;
+            Focus?.Invoke(active);
         }
     }
 
@@ -39,7 +42,10 @@ namespace CampusMuseum
             internal bool NearSelection;
             internal bool ReleaseCancelled;
             internal WorldAction Hovered;
-            internal bool pressed;
+            internal bool triggerPressed;
+            internal bool gripPressed;
+            internal InputAction aimPosition;
+            internal InputAction aimRotation;
             internal LineRenderer line;
             internal Transform controller;
         }
@@ -58,7 +64,7 @@ namespace CampusMuseum
         float turnCooldown;
         bool xr;
         bool floorTracked;
-        bool leftToggle;
+        MuseumTeleport teleport;
         readonly List<XRInputSubsystem> subsystems = new();
 
         public void Initialize(Camera camera)
@@ -74,8 +80,26 @@ namespace CampusMuseum
             if (origin) origin.gameObject.SetActive(false);
             playerCamera.nearClipPlane = .035f;
             playerCamera.farClipPlane = 85f;
+            MakeAim(Left,"LeftHand");
+            MakeAim(Right,"RightHand");
+            teleport=gameObject.AddComponent<MuseumTeleport>();
+            teleport.Initialize(this,camera);
             MakeHand(Left, new Color(.25f, .8f, .92f));
             MakeHand(Right, new Color(.25f, .8f, .92f));
+        }
+
+        void MakeAim(Hand hand, string usage)
+        {
+            hand.aimPosition = new InputAction(binding:$"<XRController>{{{usage}}}/pointerPosition",expectedControlType:"Vector3");
+            hand.aimRotation = new InputAction(binding:$"<XRController>{{{usage}}}/pointerRotation",expectedControlType:"Quaternion");
+            hand.aimPosition.Enable();
+            hand.aimRotation.Enable();
+        }
+
+        void OnDestroy()
+        {
+            Left.aimPosition?.Dispose(); Left.aimRotation?.Dispose();
+            Right.aimPosition?.Dispose(); Right.aimRotation?.Dispose();
         }
 
         void MakeHand(Hand hand, Color color)
@@ -93,6 +117,7 @@ namespace CampusMuseum
 
         public void Place(Vector3 floor, float heading)
         {
+            teleport?.Cancel();
             var offset = head.position - transform.position;
             offset.y = 0;
             transform.position = floor - offset;
@@ -117,6 +142,8 @@ namespace CampusMuseum
             xr = hmd.isValid && hmd.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var tracked) && tracked;
             if (wasXr && !xr)
             {
+                teleport.Cancel();
+                TeleportMode=false;
                 SetPointer(Left, false, false);
                 SetPointer(Right, false, false);
             }
@@ -145,16 +172,15 @@ namespace CampusMuseum
                 leftDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxis, out move);
                 rightDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primary2DAxis, out var turn);
                 turnCooldown -= Time.unscaledDeltaTime;
-                if (Mathf.Abs(turn.x) > .7f && turnCooldown <= 0 && CanMove())
+                if (turn.y < .5f && Mathf.Abs(turn.x) > .7f && turnCooldown <= 0 && CanMove())
                 {
                     transform.RotateAround(head.position, Vector3.up, Mathf.Sign(turn.x) * 30);
                     turnCooldown = .28f;
                 }
-                leftDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primaryButton, out var toggle);
-                if (toggle && !leftToggle) TeleportMode = !TeleportMode;
-                leftToggle = toggle;
                 AimXR(Left, leftDevice);
                 AimXR(Right, rightDevice);
+                TeleportMode = turn.y > .65f && Left.Held == null && Right.Held == null;
+                teleport.Aim(Right.Ray,TeleportMode);
             }
             else if (keyboard != null && mouse != null)
             {
@@ -170,7 +196,8 @@ namespace CampusMuseum
                 if (keyboard.tKey.wasPressedThisFrame) TeleportMode = !TeleportMode;
                 Right.Ray = playerCamera.ScreenPointToRay(mouse.position.ReadValue());
                 SetPointer(Left, false, false);
-                SetPointer(Right, true, mouse.leftButton.isPressed);
+                SetPointer(Right, !TeleportMode, mouse.leftButton.isPressed);
+                teleport.Aim(Right.Ray,TeleportMode && mouse.leftButton.isPressed);
             }
 
             if (CanMove() && !TeleportMode)
@@ -189,16 +216,23 @@ namespace CampusMuseum
             valid &= device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.deviceRotation, out var rotation);
             if (valid)
             {
+                if (hand.aimPosition.activeControl != null && hand.aimRotation.activeControl != null)
+                {
+                    position = hand.aimPosition.ReadValue<Vector3>();
+                    rotation = hand.aimRotation.ReadValue<Quaternion>();
+                }
+                else rotation *= Quaternion.Euler(-40f,0,0);
                 var world = transform.TransformPoint(position + (floorTracked ? Vector3.zero : Vector3.up * 1.65f));
                 var orientation = transform.rotation * rotation;
                 hand.controller.SetPositionAndRotation(world, orientation);
                 hand.Ray = new Ray(world + orientation * Vector3.forward * .055f, orientation * Vector3.forward);
             }
             device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out var trigger);
-            SetPointer(hand, valid, trigger);
+            device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out var grip);
+            SetPointer(hand, valid && !TeleportMode, trigger, grip);
         }
 
-        void SetPointer(Hand hand, bool valid, bool trigger)
+        void SetPointer(Hand hand, bool valid, bool trigger, bool grip = false)
         {
             hand.controller.gameObject.SetActive(valid && xr);
             hand.line.enabled = valid && (xr || hand.Held != null);
@@ -233,17 +267,14 @@ namespace CampusMuseum
                 if (action) action.Hover(true);
             }
             bool target = action != null;
-            bool teleport = valid && TeleportMode && hand.Held == null && !target &&
-                new Plane(Vector3.up, Vector3.zero).Raycast(hand.Ray, out var distance) &&
-                distance < 12 && CanStand(hand.Ray.GetPoint(distance));
-            if (teleport && new Plane(Vector3.up, Vector3.zero).Raycast(hand.Ray, out var floorDistance))
-                end = hand.Ray.GetPoint(floorDistance);
-
+            bool requiresGrab = xr && (hand.Held ? hand.Held.RequiresGrab : action && action.RequiresGrab);
+            bool pressed = requiresGrab ? grip : trigger;
+            bool wasPressed = requiresGrab ? hand.gripPressed : hand.triggerPressed;
             hand.line.SetPosition(0, hand.Ray.origin);
             hand.line.SetPosition(1, end);
-            hand.line.sharedMaterial = WorldView.MakeMaterial(target || teleport ? WorldView.Teal : WorldView.Quiet, true);
+            hand.line.sharedMaterial = WorldView.MakeMaterial(target ? WorldView.Teal : WorldView.Quiet, true);
 
-            if (valid && trigger && !hand.pressed)
+            if (valid && pressed && !wasPressed)
             {
                 if (action)
                 {
@@ -252,19 +283,16 @@ namespace CampusMuseum
                     hand.ReleaseCancelled = false;
                     action.Press?.Invoke(hand);
                 }
-                else if (teleport && CanMove())
-                {
-                    Place(new Vector3(end.x, 0, end.z), head.eulerAngles.y);
-                }
             }
-            if ((!valid || !trigger) && hand.pressed)
+            if ((!valid || !pressed) && hand.Held)
             {
                 var held = hand.Held;
                 hand.Held = null;
                 hand.ReleaseCancelled = !valid;
                 if (held) held.Release?.Invoke(hand);
             }
-            hand.pressed = valid && trigger;
+            hand.triggerPressed = trigger;
+            hand.gripPressed = grip;
         }
     }
 }

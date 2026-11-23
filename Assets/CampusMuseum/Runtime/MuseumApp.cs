@@ -11,7 +11,7 @@ namespace CampusMuseum
 {
     public sealed partial class MuseumApp : MonoBehaviour
     {
-        const float Scale = .092f;
+        float Scale => .092f * Mathf.Min(MapWidth/4.3f,MapLength/2.8f);
         WorkshopLayout workshop;
         Vector3 MapCenter => workshop.mapOrigin.position;
         Vector3 EditCenter => workshop.editingOrigin.position;
@@ -114,8 +114,9 @@ namespace CampusMuseum
         void Update()
         {
             if (!player) return;
-            if (dirty && !carriedView && !heldArtwork) Draw();
+            if (dirty && !carriedView && !heldArtwork && resizingHand==null) Draw();
             player.Tick();
+            if (resizingHand!=null) UpdateRoomResize();
             if (carriedView) UpdateRoomDrag(Time.unscaledDeltaTime);
             if (heldArtwork) UpdateArtworkDrag(Time.unscaledDeltaTime);
             if (drawing && corner.HasValue && preview)
@@ -208,8 +209,10 @@ namespace CampusMuseum
                 }
                 var root = Shell(stage,room,OnMap(room.position),room.rotation,Scale,true,room.id == selectedRoom ? Teal : Cream);
                 roomViews.Add(room.id,root);
+                if(room.id==selectedRoom && !drawing && !linking) DrawRoomHandles(room,root);
                 var pick = root.gameObject.AddComponent<WorldAction>();
                 pick.Direct=true;
+                pick.RequiresGrab=true;
                 pick.Press = h => SelectRoom(room,h,root);
                 pick.Release = DropRoom;
                 Text(root,Wrap(room.name,19,1),new Vector3(0,room.height*.12f,-room.length/2-.065f),
@@ -267,7 +270,7 @@ namespace CampusMuseum
                 Tell(connected ? "Connexion retirée." : "Salles reliées dans les deux sens.");
                 return;
             }
-            if (draft != null || returningRoom != null || carriedView || heldArtwork)
+            if (draft != null || returningRoom != null || carriedView || heldArtwork || resizingHand!=null)
             {
                 Tell("Termine le travail à la table d’édition.");
                 return;
@@ -399,30 +402,6 @@ namespace CampusMuseum
             }
             Api.SetRoomTransform(room.id,room.position,room.rotation);
             Tell("Orientation modifiée.");
-        }
-
-        void Resize(int axis,float delta)
-        {
-            var target = draft?.Api ?? Api;
-            var room = target.GetRoom(draft?.RoomId ?? selectedRoom);
-            if(room == null || returningRoom != null) return;
-            if(axis==0) room.width=Mathf.Clamp(room.width+delta,2f,18f);
-            if(axis==1) room.length=Mathf.Clamp(room.length+delta,2f,18f);
-            if(axis==2) room.height=Mathf.Clamp(room.height+delta,2.2f,7f);
-            if(!FitsTable(room) || MuseumLayout.Overlaps(room,data.rooms))
-            {
-                Tell("Ces dimensions recouvriraient une autre salle ou dépasseraient du plateau.");
-                return;
-            }
-            var outside=target.GetArtworksInRoom(room.id).FirstOrDefault(a=>!MuseumLayout.Contains(room,a.localPosition));
-            if(outside!=null)
-            {
-                Tell("Déplace d’abord « "+outside.title+" » vers l’intérieur.");
-                return;
-            }
-            if (draft != null) draft.Apply(a=>a.ResizeRoom(room.id,room.width,room.length,room.height));
-            else Api.ResizeRoom(room.id,room.width,room.length,room.height);
-            Tell("Dimensions mises à jour.");
         }
 
         void DeleteRoom()
