@@ -72,3 +72,19 @@ $verification = Get-Content tests/test-visitor.csx -Raw
 unity command script eval --caller plugin --skill unity-cli --project-path Unity -- --code $verification
 unity command editor.playmode stop --caller plugin --skill unity-cli --project-path Unity
 ```
+
+## Tests utilisateurs
+
+Nous partons d’une maquette vide pour observer la construction de trois salles, l’ajout de sept œuvres, la création d’un parcours, sa visite puis les suppressions et le rechargement. Le protocole reprend le scénario du groupe et précise les observations, les temps, les aides et le questionnaire SUS à dix questions. Il est à faire valider par l’enseignant avant les passations.
+
+- [Protocole et feuilles vierges en PDF](docs/Protocole-tests-utilisateurs.pdf)
+- [Version modifiable du protocole](docs/protocole-tests-utilisateurs.md)
+
+Pour régénérer le PDF à partir du document Markdown :
+
+```powershell
+python -m pip install reportlab pypdf
+python scripts/generate_protocol.py
+```
+
+Les réponses individuelles et les enregistrements restent hors du dépôt public, dans le dossier local `Resultats-tests`. Le dossier `Retours` reste également exclu.
